@@ -84,8 +84,10 @@ jobs:
           SNOWFLAKE_ROLE: ${{ vars.SNOWFLAKE_ROLE }}
           SNOWFLAKE_WAREHOUSE: ${{ vars.SNOWFLAKE_WAREHOUSE }}
           SNOWFLAKE_DATABASE: ${{ vars.SNOWFLAKE_DATABASE }}
-          SNOWFLAKE_AUTHENTICATOR: oauth
-          SNOWFLAKE_TOKEN: ${{ env.SNOWFLAKE_TOKEN }}
+          # The snowflake-cli-action exports SNOWFLAKE_WORKLOAD_IDENTITY_PROVIDER=OIDC,
+          # SNOWFLAKE_AUDIENCE, and a fresh SNOWFLAKE_TOKEN. snowflake-connector-python
+          # requires SNOWFLAKE_AUTHENTICATOR=WORKLOAD_IDENTITY (uppercase) to use them.
+          SNOWFLAKE_AUTHENTICATOR: WORKLOAD_IDENTITY
         run: |
           schemachange \
             -f migrations/snowflake \

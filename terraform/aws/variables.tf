@@ -25,16 +25,16 @@ variable "github_owner" {
 variable "github_repo" {
   type        = string
   description = "GitHub repository name"
-  default     = "abbvie-dataops-poc-aws"
+  default     = "abbvie-dataops-sdk"
 }
 
 variable "github_subject_claims" {
   type        = list(string)
   description = "Allowed GitHub OIDC subject claim patterns"
   default = [
-    "repo:sfc-gh-palapaty/abbvie-dataops-poc-aws:ref:refs/heads/main",
-    "repo:sfc-gh-palapaty/abbvie-dataops-poc-aws:pull_request",
-    "repo:sfc-gh-palapaty/abbvie-dataops-poc-aws:environment:dev"
+    "repo:sfc-gh-palapaty/abbvie-dataops-sdk:ref:refs/heads/main",
+    "repo:sfc-gh-palapaty/abbvie-dataops-sdk:pull_request",
+    "repo:sfc-gh-palapaty/abbvie-dataops-sdk:environment:dev"
   ]
 }
 
