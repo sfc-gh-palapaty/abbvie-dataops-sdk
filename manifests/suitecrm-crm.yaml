@@ -6,7 +6,7 @@ adapter: suitecrm
 profile: promote
 
 connection:
-  suitecrm_db_secret_arn: arn:aws:secretsmanager:us-west-2:194722405805:secret:abbvie-dataops-poc/suitecrm/db
+  suitecrm_db_secret_arn: arn:aws:secretsmanager:us-east-1:194722405805:secret:abbvie-dataops-poc/suitecrm/db
   suitecrm_table: accounts
 
 checks:

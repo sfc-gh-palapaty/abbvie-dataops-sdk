@@ -5,7 +5,7 @@ Step-by-step operating instructions for the AbbVie DataOps PoC.
 ## 1. AWS account bring-up
 
 ```bash
-export AWS_REGION=us-west-2
+export AWS_REGION=us-east-1
 export AWS_ACCESS_KEY_ID=...           # account 194722405805
 export AWS_SECRET_ACCESS_KEY=...
 export AWS_SESSION_TOKEN=...
@@ -40,7 +40,7 @@ Then `terraform -chdir=terraform/snowflake apply`.
 
 Set GitHub repo Variables:
 
-- `SNOWFLAKE_ACCOUNT` -> e.g. `xy12345.us-west-2.aws`
+- `SNOWFLAKE_ACCOUNT` -> e.g. `xy12345.us-east-1.aws`
 - `SNOWFLAKE_USER` -> `GH_CICD_USER`
 - `SNOWFLAKE_ROLE` -> `ABBVIE_DATAOPS_DEPLOY`
 - `SNOWFLAKE_WAREHOUSE` -> `ABBVIE_DATAOPS_WH`

@@ -30,7 +30,7 @@ flowchart LR
     MFST[manifests/*.yaml]
   end
 
-  subgraph AWS["AWS account 194722405805 (us-west-2)"]
+  subgraph AWS["AWS account 194722405805 (us-east-1)"]
     OIDC[OIDC IAM role]
     S3[(S3 raw / curated / lineage / artifacts)]
     GLUE[(Glue + Iceberg)]
@@ -81,7 +81,7 @@ flowchart LR
 
 ```bash
 # 0. AWS creds (the user-provided STS credentials for account 194722405805)
-export AWS_REGION=us-west-2
+export AWS_REGION=us-east-1
 export AWS_ACCESS_KEY_ID=...
 export AWS_SECRET_ACCESS_KEY=...
 export AWS_SESSION_TOKEN=...

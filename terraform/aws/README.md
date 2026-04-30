@@ -1,6 +1,6 @@
 # AWS infrastructure for the AbbVie DataOps PoC
 
-Provisions the AWS-side of the PoC in account `194722405805` (us-west-2 by default):
+Provisions the AWS-side of the PoC in account `194722405805` (us-east-1, where the DataHub EC2 lives):
 
 - 4 S3 buckets: `raw`, `curated`, `lineage`, `artifacts`
 - 2 Glue databases: `..._bronze`, `..._curated` (Iceberg)
@@ -13,7 +13,7 @@ Provisions the AWS-side of the PoC in account `194722405805` (us-west-2 by defau
 ## Bring-up
 
 ```bash
-export AWS_REGION=us-west-2
+export AWS_REGION=us-east-1
 terraform init
 terraform plan -out tf.plan
 terraform apply tf.plan
@@ -28,7 +28,7 @@ After `apply`, set these as GitHub Actions **repository variables** (Settings â†
 | Variable | Source |
 |---|---|
 | `AWS_GHA_ROLE_ARN` | output `github_actions_role_arn` |
-| `AWS_REGION` | `us-west-2` |
+| `AWS_REGION` | `us-east-1` |
 | `EMR_APPLICATION_ID` | output `emr_serverless_application_id` |
 | `EMR_RUNTIME_ROLE_ARN` | output `emr_runtime_role_arn` |
 | `S3_RAW_BUCKET` / `S3_CURATED_BUCKET` / `S3_LINEAGE_BUCKET` / `S3_ARTIFACTS_BUCKET` | output `s3_buckets` |

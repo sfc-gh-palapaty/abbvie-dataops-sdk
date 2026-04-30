@@ -1,7 +1,7 @@
 variable "aws_region" {
   type        = string
-  description = "AWS region for all PoC resources"
-  default     = "us-west-2"
+  description = "AWS region for all PoC resources -- must match the region of the DataHub EC2"
+  default     = "us-east-1"
 }
 
 variable "environment" {
