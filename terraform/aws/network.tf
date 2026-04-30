@@ -14,6 +14,14 @@ data "aws_subnets" "default" {
     name   = "vpc-id"
     values = [var.vpc_id == "" ? data.aws_vpc.default[0].id : var.vpc_id]
   }
+
+  # EMR Serverless does NOT support every AZ in us-east-1 (specifically not
+  # use1-az3 / use1-az5 in this account). Restrict to the most common
+  # supported AZs in us-east-1 (a/b/c -> use1-az2/4/6) and us-west-2 defaults.
+  filter {
+    name   = "availability-zone"
+    values = ["us-east-1a", "us-east-1b", "us-east-1c", "us-west-2a", "us-west-2b", "us-west-2c"]
+  }
 }
 
 locals {
@@ -40,18 +48,32 @@ resource "aws_security_group" "datahub_access" {
   }
 }
 
-resource "aws_security_group_rule" "datahub_ingress_gms" {
-  security_group_id        = data.aws_instance.datahub.vpc_security_group_ids[0]
+locals {
+  datahub_sg_id = tolist(data.aws_instance.datahub.vpc_security_group_ids)[0]
+}
+
+resource "aws_security_group_rule" "datahub_ingress_frontend" {
+  security_group_id        = local.datahub_sg_id
   type                     = "ingress"
-  from_port                = 8080
-  to_port                  = 8080
+  from_port                = 9002
+  to_port                  = 9002
   protocol                 = "tcp"
   source_security_group_id = aws_security_group.datahub_access.id
-  description              = "DataHub frontend from PoC workloads"
+  description              = "DataHub frontend from PoC workloads (remapped to avoid 8080 collision on EC2)"
+}
+
+resource "aws_security_group_rule" "datahub_ingress_marquez_ui" {
+  security_group_id        = local.datahub_sg_id
+  type                     = "ingress"
+  from_port                = 13000
+  to_port                  = 13000
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.datahub_access.id
+  description              = "Marquez Web UI from PoC workloads (remapped to avoid 3000 collision on EC2)"
 }
 
 resource "aws_security_group_rule" "datahub_ingress_gms_api" {
-  security_group_id        = data.aws_instance.datahub.vpc_security_group_ids[0]
+  security_group_id        = local.datahub_sg_id
   type                     = "ingress"
   from_port                = 8000
   to_port                  = 8000
@@ -61,7 +83,7 @@ resource "aws_security_group_rule" "datahub_ingress_gms_api" {
 }
 
 resource "aws_security_group_rule" "datahub_ingress_marquez" {
-  security_group_id        = data.aws_instance.datahub.vpc_security_group_ids[0]
+  security_group_id        = local.datahub_sg_id
   type                     = "ingress"
   from_port                = 5000
   to_port                  = 5000
