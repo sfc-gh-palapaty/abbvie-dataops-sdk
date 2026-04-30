@@ -43,7 +43,7 @@ jobs:
           python-version: "3.11"
 
       - name: Install Snowflake CLI (OIDC-enabled)
-        uses: snowflakedb/[email protected]
+        uses: snowflakedb/snowflake-cli-action@v2
         with:
           use-oidc: true
           cli-version: "3.16"
