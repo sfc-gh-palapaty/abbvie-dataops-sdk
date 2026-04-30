@@ -1,0 +1,13 @@
+{
+  "table": "accounts",
+  "platform": "mysql",
+  "columns": [
+    { "name": "id", "data_type": "varchar(36)", "nullable": false },
+    { "name": "name", "data_type": "varchar(150)", "nullable": false },
+    { "name": "industry", "data_type": "varchar(50)", "nullable": true },
+    { "name": "annual_revenue", "data_type": "decimal(18,2)", "nullable": true },
+    { "name": "email", "data_type": "varchar(254)", "nullable": true },
+    { "name": "created_at", "data_type": "datetime", "nullable": false },
+    { "name": "updated_at", "data_type": "datetime", "nullable": false }
+  ]
+}

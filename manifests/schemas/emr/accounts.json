@@ -1,0 +1,13 @@
+{
+  "table": "accounts",
+  "platform": "iceberg",
+  "columns": [
+    { "name": "id", "data_type": "string", "nullable": false },
+    { "name": "name", "data_type": "string", "nullable": false },
+    { "name": "industry", "data_type": "string", "nullable": true },
+    { "name": "annual_revenue", "data_type": "decimal(18,2)", "nullable": true },
+    { "name": "email", "data_type": "string", "nullable": true },
+    { "name": "created_at", "data_type": "timestamp", "nullable": false },
+    { "name": "updated_at", "data_type": "timestamp", "nullable": false }
+  ]
+}

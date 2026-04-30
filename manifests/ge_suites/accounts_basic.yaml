@@ -1,0 +1,16 @@
+# Lightweight DQ suite — runs as dry-run when no row source is wired in (CI).
+# Adapters supply real rows in promote profile.
+checks:
+  - name: at_least_one_account
+    kind: row_count_min
+    threshold: 1
+  - name: id_not_null
+    kind: not_null
+    column: id
+  - name: id_unique
+    kind: unique
+    column: id
+  - name: industry_in_set
+    kind: value_in_set
+    column: industry
+    allowed_values: [pharma, biotech, healthcare, technology, services, other, null]

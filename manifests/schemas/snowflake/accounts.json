@@ -1,0 +1,13 @@
+{
+  "table": "ACCOUNTS",
+  "platform": "snowflake",
+  "columns": [
+    { "name": "ID", "data_type": "VARCHAR", "nullable": false },
+    { "name": "NAME", "data_type": "VARCHAR", "nullable": false },
+    { "name": "INDUSTRY", "data_type": "VARCHAR", "nullable": true },
+    { "name": "ANNUAL_REVENUE", "data_type": "NUMBER", "nullable": true },
+    { "name": "EMAIL", "data_type": "VARCHAR", "nullable": true },
+    { "name": "CREATED_AT", "data_type": "TIMESTAMP_NTZ", "nullable": false },
+    { "name": "UPDATED_AT", "data_type": "TIMESTAMP_NTZ", "nullable": false }
+  ]
+}

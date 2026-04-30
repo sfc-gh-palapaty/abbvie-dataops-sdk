@@ -1,0 +1,112 @@
+# Snowflake CI/CD via Snowflake CLI (OIDC) + schemachange + DataOps SDK governance gate
+#
+# References:
+#   https://www.snowflake.com/en/developers/guides/configure-cicd-integrations-with-snowflake/
+#   https://www.snowflake.com/en/developers/guides/devops-dcm-schemachange-github/
+#
+# Required GitHub repo VARIABLES (Settings -> Variables -> Actions):
+#   SNOWFLAKE_ACCOUNT, SNOWFLAKE_USER, SNOWFLAKE_ROLE, SNOWFLAKE_WAREHOUSE,
+#   SNOWFLAKE_DATABASE, AWS_GHA_ROLE_ARN, AWS_REGION,
+#   DATAHUB_ENDPOINTS_SECRET_ARN
+
+name: snowflake-deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "migrations/snowflake/**"
+      - "manifests/snowflake-*.yaml"
+      - "manifests/schemas/snowflake/**"
+      - "manifests/constraints/snowflake/**"
+      - "sdk/**"
+      - ".github/workflows/snowflake-deploy.yml"
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Snowflake CLI (OIDC-enabled)
+        uses: snowflakedb/[email protected]
+        with:
+          use-oidc: true
+          cli-version: "3.16"
+
+      - name: Test Snowflake connection (OIDC)
+        env:
+          SNOWFLAKE_ACCOUNT: ${{ vars.SNOWFLAKE_ACCOUNT }}
+          SNOWFLAKE_USER: ${{ vars.SNOWFLAKE_USER }}
+          SNOWFLAKE_ROLE: ${{ vars.SNOWFLAKE_ROLE }}
+          SNOWFLAKE_WAREHOUSE: ${{ vars.SNOWFLAKE_WAREHOUSE }}
+          SNOWFLAKE_DATABASE: ${{ vars.SNOWFLAKE_DATABASE }}
+        run: snow connection test -x
+
+      - name: Install schemachange + DataOps SDK
+        run: |
+          python -m pip install --upgrade pip
+          pip install schemachange
+          pip install -e './sdk[all]'
+
+      - name: Configure AWS credentials (OIDC, for SDK to read DataHub endpoints)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_GHA_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Resolve DataHub + Marquez endpoints
+        id: endpoints
+        run: |
+          payload=$(aws secretsmanager get-secret-value --secret-id "${{ vars.DATAHUB_ENDPOINTS_SECRET_ARN }}" --query SecretString --output text)
+          echo "DATAHUB_GMS_URL=$(echo "$payload" | jq -r .datahub_gms_url)" >> $GITHUB_ENV
+          echo "OPENLINEAGE_URL=$(echo "$payload" | jq -r .openlineage_url)" >> $GITHUB_ENV
+          echo "DATAHUB_TOKEN=$(echo "$payload" | jq -r .datahub_token)" >> $GITHUB_ENV
+
+      - name: Run schemachange (DCM)
+        env:
+          SNOWFLAKE_ACCOUNT: ${{ vars.SNOWFLAKE_ACCOUNT }}
+          SNOWFLAKE_USER: ${{ vars.SNOWFLAKE_USER }}
+          SNOWFLAKE_ROLE: ${{ vars.SNOWFLAKE_ROLE }}
+          SNOWFLAKE_WAREHOUSE: ${{ vars.SNOWFLAKE_WAREHOUSE }}
+          SNOWFLAKE_DATABASE: ${{ vars.SNOWFLAKE_DATABASE }}
+          SNOWFLAKE_AUTHENTICATOR: oauth
+          SNOWFLAKE_TOKEN: ${{ env.SNOWFLAKE_TOKEN }}
+        run: |
+          schemachange \
+            -f migrations/snowflake \
+            -a "$SNOWFLAKE_ACCOUNT" \
+            -u "$SNOWFLAKE_USER" \
+            -r "$SNOWFLAKE_ROLE" \
+            -w "$SNOWFLAKE_WAREHOUSE" \
+            -d "$SNOWFLAKE_DATABASE" \
+            -c "$SNOWFLAKE_DATABASE.SCHEMACHANGE.CHANGE_HISTORY" \
+            --create-change-history-table
+
+      - name: Run DataOps governance SDK (promote profile)
+        run: |
+          abbvie-dataops run \
+            --manifest manifests/snowflake-curated.yaml \
+            --profile promote \
+            --evidence-out evidence-snowflake.json
+
+      - name: Upload evidence bundle
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evidence-snowflake
+          path: evidence-snowflake.json

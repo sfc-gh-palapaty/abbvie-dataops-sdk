@@ -1,0 +1,32 @@
+# Local-only: spin up MySQL + SuiteCRM container for developer iteration.
+# Production runs on ECS Fargate + RDS; see terraform/aws.
+version: "3.9"
+
+services:
+  db:
+    image: mysql:8.0
+    environment:
+      MYSQL_DATABASE: suitecrm
+      MYSQL_USER: suitecrm
+      MYSQL_PASSWORD: suitecrm
+      MYSQL_ROOT_PASSWORD: rootpw
+    ports: ["3306:3306"]
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "root", "-prootpw"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  app:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SUITECRM_DB_HOST: db
+      SUITECRM_DB_PORT: "3306"
+      SUITECRM_DB_USER: suitecrm
+      SUITECRM_DB_PASSWORD: suitecrm
+      SUITECRM_DB_NAME: suitecrm
+    ports: ["8001:8001"]
+    command: ["-m", "extractor.serve"]

@@ -1,0 +1,116 @@
+# EMR Serverless deployment with OpenLineage Spark listener + DataOps SDK gate.
+# Required repo variables: AWS_GHA_ROLE_ARN, AWS_REGION, EMR_APPLICATION_ID,
+# EMR_RUNTIME_ROLE_ARN, S3_ARTIFACTS_BUCKET, S3_RAW_BUCKET, S3_CURATED_BUCKET,
+# DATAHUB_ENDPOINTS_SECRET_ARN, GLUE_CURATED_DB.
+
+name: emr-deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "pipelines/emr/**"
+      - "manifests/emr-*.yaml"
+      - "manifests/schemas/emr/**"
+      - "sdk/**"
+      - ".github/workflows/emr-deploy.yml"
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  OPENLINEAGE_SPARK_VERSION: "1.18.0"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install SDK + boto3
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e './sdk[all]'
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_GHA_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Resolve DataHub + Marquez endpoints
+        run: |
+          payload=$(aws secretsmanager get-secret-value --secret-id "${{ vars.DATAHUB_ENDPOINTS_SECRET_ARN }}" --query SecretString --output text)
+          echo "DATAHUB_GMS_URL=$(echo "$payload" | jq -r .datahub_gms_url)" >> $GITHUB_ENV
+          echo "OPENLINEAGE_URL=$(echo "$payload" | jq -r .openlineage_url)" >> $GITHUB_ENV
+          echo "DATAHUB_TOKEN=$(echo "$payload" | jq -r .datahub_token)" >> $GITHUB_ENV
+
+      - name: Stage PySpark + OpenLineage listener jar to S3
+        run: |
+          aws s3 cp pipelines/emr/transform_accounts.py \
+            s3://${{ vars.S3_ARTIFACTS_BUCKET }}/emr/transform_accounts.py
+          aws s3 cp pipelines/emr/log4j2.properties \
+            s3://${{ vars.S3_ARTIFACTS_BUCKET }}/emr/log4j2.properties
+          curl -fsSL -o openlineage-spark.jar \
+            https://repo1.maven.org/maven2/io/openlineage/openlineage-spark_2.12/${OPENLINEAGE_SPARK_VERSION}/openlineage-spark_2.12-${OPENLINEAGE_SPARK_VERSION}.jar
+          aws s3 cp openlineage-spark.jar \
+            s3://${{ vars.S3_ARTIFACTS_BUCKET }}/emr/jars/openlineage-spark.jar
+
+      - name: Submit EMR Serverless job
+        id: submit
+        run: |
+          job_id=$(aws emr-serverless start-job-run \
+            --application-id "${{ vars.EMR_APPLICATION_ID }}" \
+            --execution-role-arn "${{ vars.EMR_RUNTIME_ROLE_ARN }}" \
+            --name "transform_accounts-${{ github.run_id }}" \
+            --job-driver "{
+              \"sparkSubmit\": {
+                \"entryPoint\": \"s3://${{ vars.S3_ARTIFACTS_BUCKET }}/emr/transform_accounts.py\",
+                \"entryPointArguments\": [
+                  \"--input\", \"s3://${{ vars.S3_RAW_BUCKET }}/suitecrm/accounts/\",
+                  \"--output\", \"s3://${{ vars.S3_CURATED_BUCKET }}/accounts/\",
+                  \"--glue-database\", \"${{ vars.GLUE_CURATED_DB }}\",
+                  \"--glue-table\", \"accounts\"
+                ],
+                \"sparkSubmitParameters\": \"--jars s3://${{ vars.S3_ARTIFACTS_BUCKET }}/emr/jars/openlineage-spark.jar --conf spark.extraListeners=io.openlineage.spark.agent.OpenLineageSparkListener --conf spark.openlineage.transport.type=http --conf spark.openlineage.transport.url=${OPENLINEAGE_URL} --conf spark.openlineage.namespace=abbvie.glue --conf spark.sql.extensions=org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions --conf spark.sql.catalog.glue_catalog=org.apache.iceberg.spark.SparkCatalog --conf spark.sql.catalog.glue_catalog.catalog-impl=org.apache.iceberg.aws.glue.GlueCatalog --conf spark.sql.catalog.glue_catalog.warehouse=s3://${{ vars.S3_CURATED_BUCKET }}/\"
+              }
+            }" \
+            --query jobRunId --output text)
+          echo "job_id=$job_id" >> $GITHUB_OUTPUT
+
+      - name: Wait for job completion
+        run: |
+          job_id=${{ steps.submit.outputs.job_id }}
+          for i in $(seq 1 60); do
+            state=$(aws emr-serverless get-job-run --application-id "${{ vars.EMR_APPLICATION_ID }}" --job-run-id "$job_id" --query 'jobRun.state' --output text)
+            echo "[$i] state=$state"
+            case "$state" in
+              SUCCESS) exit 0 ;;
+              FAILED|CANCELLED) echo "EMR job failed"; exit 1 ;;
+            esac
+            sleep 20
+          done
+          echo "Timeout waiting for EMR job"; exit 1
+
+      - name: Run DataOps governance SDK (promote profile)
+        run: |
+          abbvie-dataops run \
+            --manifest manifests/emr-iceberg-bronze.yaml \
+            --profile promote \
+            --evidence-out evidence-emr.json
+
+      - name: Upload evidence bundle
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evidence-emr
+          path: evidence-emr.json

@@ -1,0 +1,9 @@
+expected:
+  - name: PRIMARY
+    type: primary_key
+    table: accounts
+    columns: [id]
+  - name: uq_accounts_email
+    type: unique
+    table: accounts
+    columns: [email]

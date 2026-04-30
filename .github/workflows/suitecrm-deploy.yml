@@ -1,0 +1,103 @@
+# SuiteCRM (Salesforce-analog) deployment: build image, push to ECR, run Doctrine migrations
+# on RDS, run extractor to land Parquet to S3 raw, then DataOps SDK gate.
+
+name: suitecrm-deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/suitecrm/**"
+      - "manifests/suitecrm-*.yaml"
+      - "manifests/schemas/suitecrm/**"
+      - "manifests/constraints/suitecrm/**"
+      - "sdk/**"
+      - ".github/workflows/suitecrm-deploy.yml"
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  IMAGE_TAG: ${{ github.sha }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install SDK
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e './sdk[all]'
+          pip install pymysql cryptography pandas pyarrow
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_GHA_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: ECR login
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build & push SuiteCRM image
+        run: |
+          docker build -t ${{ vars.ECR_REPOSITORY_URL }}:${IMAGE_TAG} apps/suitecrm
+          docker push ${{ vars.ECR_REPOSITORY_URL }}:${IMAGE_TAG}
+
+      - name: Resolve secrets
+        run: |
+          dh=$(aws secretsmanager get-secret-value --secret-id "${{ vars.DATAHUB_ENDPOINTS_SECRET_ARN }}" --query SecretString --output text)
+          echo "DATAHUB_GMS_URL=$(echo "$dh" | jq -r .datahub_gms_url)" >> $GITHUB_ENV
+          echo "OPENLINEAGE_URL=$(echo "$dh" | jq -r .openlineage_url)" >> $GITHUB_ENV
+          echo "DATAHUB_TOKEN=$(echo "$dh" | jq -r .datahub_token)" >> $GITHUB_ENV
+          db=$(aws secretsmanager get-secret-value --secret-id "${{ vars.SUITECRM_DB_SECRET_ARN }}" --query SecretString --output text)
+          echo "SUITECRM_DB_HOST=$(echo "$db" | jq -r .host)" >> $GITHUB_ENV
+          echo "SUITECRM_DB_PORT=$(echo "$db" | jq -r .port)" >> $GITHUB_ENV
+          echo "::add-mask::$(echo "$db" | jq -r .password)"
+          echo "SUITECRM_DB_USER=$(echo "$db" | jq -r .username)" >> $GITHUB_ENV
+          echo "SUITECRM_DB_PASSWORD=$(echo "$db" | jq -r .password)" >> $GITHUB_ENV
+          echo "SUITECRM_DB_NAME=$(echo "$db" | jq -r .database)" >> $GITHUB_ENV
+
+      - name: Run Doctrine migrations against RDS
+        run: |
+          python apps/suitecrm/migrations/runner.py \
+            --host "$SUITECRM_DB_HOST" --port "$SUITECRM_DB_PORT" \
+            --user "$SUITECRM_DB_USER" --password "$SUITECRM_DB_PASSWORD" \
+            --database "$SUITECRM_DB_NAME" \
+            --migrations-dir apps/suitecrm/migrations
+
+      - name: Seed sample CRM data
+        run: python apps/suitecrm/extractor/seed.py
+
+      - name: Run extractor (land Parquet to S3 raw)
+        env:
+          S3_RAW_BUCKET: ${{ vars.S3_RAW_BUCKET }}
+        run: |
+          python apps/suitecrm/extractor/extract.py \
+            --table accounts \
+            --s3-uri "s3://${S3_RAW_BUCKET}/suitecrm/accounts/"
+
+      - name: Run DataOps governance SDK (promote profile)
+        run: |
+          abbvie-dataops run \
+            --manifest manifests/suitecrm-crm.yaml \
+            --profile promote \
+            --evidence-out evidence-suitecrm.json
+
+      - name: Upload evidence bundle
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evidence-suitecrm
+          path: evidence-suitecrm.json

@@ -1,0 +1,22 @@
+# Sensitivity classification + protection method per governed column.
+# Used by the SDK tokenization check at every promote stage.
+policies:
+  - column: id
+    classification: internal
+    method: none
+    notes: surrogate key, safe to expose
+  - column: name
+    classification: confidential
+    method: dynamic_mask
+    notes: customer name -- masked in non-prod
+  - column: email
+    classification: confidential
+    method: dynamic_mask
+    notes: PII -- mask in lower envs
+  - column: annual_revenue
+    classification: confidential
+    method: hash_salt
+    notes: revenue is competitively sensitive
+  - column: industry
+    classification: internal
+    method: none

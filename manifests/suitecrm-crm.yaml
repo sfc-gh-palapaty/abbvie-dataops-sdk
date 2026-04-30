@@ -1,0 +1,33 @@
+# SuiteCRM: governs the canonical ACCOUNTS table that the rest of the chain consumes.
+service: suitecrm-crm-accounts
+owners: [crm-platform@abbvie.com]
+classification: confidential
+adapter: suitecrm
+profile: promote
+
+connection:
+  suitecrm_db_secret_arn: arn:aws:secretsmanager:us-west-2:194722405805:secret:abbvie-dataops-poc/suitecrm/db
+  suitecrm_table: accounts
+
+checks:
+  schema_enforcement:
+    expected: manifests/schemas/suitecrm/accounts.json
+  data_quality:
+    suite: manifests/ge_suites/accounts_basic.yaml
+  constraints:
+    expected: manifests/constraints/suitecrm/accounts.yaml
+    fail_on_missing: true
+  tokenization:
+    classification_map: manifests/policies/sensitivity.yaml
+
+emit:
+  openlineage:
+    namespace: abbvie.suitecrm
+    job: suitecrm.public.accounts.snapshot
+    outputs:
+      - abbvie.suitecrm/suitecrm.public.accounts
+  datahub:
+    platform: mysql
+    env: PROD
+    datasets:
+      - { db: suitecrm, schema: public, table: accounts }

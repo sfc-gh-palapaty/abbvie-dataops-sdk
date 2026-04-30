@@ -1,0 +1,35 @@
+# EMR Serverless: builds the curated Iceberg ACCOUNTS table from SuiteCRM bronze parquet.
+service: emr-curated-accounts
+owners: [data-platform@abbvie.com]
+classification: confidential
+adapter: emr
+profile: promote
+
+connection:
+  glue_database: abbvie_dataops_poc_curated
+  glue_table: accounts
+  s3_uri: s3://abbvie-dataops-poc-curated-194722405805/accounts/
+
+checks:
+  schema_enforcement:
+    expected: manifests/schemas/emr/accounts.json
+  data_quality:
+    suite: manifests/ge_suites/accounts_basic.yaml
+  tokenization:
+    classification_map: manifests/policies/sensitivity.yaml
+
+emit:
+  openlineage:
+    namespace: abbvie.glue
+    job: emr.curated.accounts.transform
+    inputs:
+      - abbvie.suitecrm/suitecrm.public.accounts
+    outputs:
+      - abbvie.glue/abbvie_dataops_poc_curated.accounts
+  datahub:
+    platform: glue
+    env: PROD
+    datasets:
+      - { db: abbvie_dataops_poc_curated, schema: default, table: accounts }
+    upstream_urns:
+      - "urn:li:dataset:(urn:li:dataPlatform:mysql,suitecrm.public.accounts,PROD)"

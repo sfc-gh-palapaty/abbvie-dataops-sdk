@@ -1,0 +1,15 @@
+# DataHub Marquez source recipe -- pulls OpenLineage runs from Marquez and ingests
+# them as DataHub lineage. Run periodically (cron / Airflow / `datahub ingest -c`):
+#   datahub ingest -c apps/datahub/datahub-marquez-source.yaml
+source:
+  type: openlineage
+  config:
+    api_url: ${OPENLINEAGE_URL:-http://localhost:5000}
+    capture_runs: true
+    capture_lineage: true
+    capture_facets: true
+sink:
+  type: datahub-rest
+  config:
+    server: ${DATAHUB_GMS_URL:-http://localhost:8000}
+    token: ${DATAHUB_TOKEN:-}

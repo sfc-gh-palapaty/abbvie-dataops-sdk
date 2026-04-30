@@ -1,0 +1,39 @@
+# Snowflake curated zone: governs the ACCOUNTS table built from EMR-curated Iceberg.
+service: snowflake-curated-accounts
+owners: [data-platform@abbvie.com]
+classification: confidential
+adapter: snowflake
+profile: promote
+
+connection:
+  snowflake_account_secret: abbvie-dataops-poc/snowflake/connection
+  snowflake_database: ABBVIE_DATAOPS_DEV
+  snowflake_schema: CURATED
+  snowflake_table: ACCOUNTS
+
+checks:
+  schema_enforcement:
+    expected: manifests/schemas/snowflake/accounts.json
+  data_quality:
+    suite: manifests/ge_suites/accounts_basic.yaml
+  constraints:
+    expected: manifests/constraints/snowflake/accounts.yaml
+    fail_on_missing: false        # informational on first deploy
+  tokenization:
+    classification_map: manifests/policies/sensitivity.yaml
+
+emit:
+  openlineage:
+    namespace: abbvie.snowflake
+    job: snowflake.curated.accounts.upsert
+    inputs:
+      - abbvie.glue/abbvie_dataops_poc_curated.accounts
+    outputs:
+      - abbvie.snowflake/abbvie_dataops_dev.curated.accounts
+  datahub:
+    platform: snowflake
+    env: PROD
+    datasets:
+      - { db: abbvie_dataops_dev, schema: curated, table: accounts }
+    upstream_urns:
+      - "urn:li:dataset:(urn:li:dataPlatform:glue,abbvie_dataops_poc_curated.accounts,PROD)"
