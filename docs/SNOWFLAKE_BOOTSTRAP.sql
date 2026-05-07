@@ -39,7 +39,12 @@ CREATE ROLE IF NOT EXISTS ABBVIE_DATAOPS_DEPLOY
     COMMENT = 'Role assumed by GitHub Actions CI to deploy DCM changes';
 
 GRANT USAGE ON WAREHOUSE ABBVIE_DATAOPS_WH        TO ROLE ABBVIE_DATAOPS_DEPLOY;
-GRANT USAGE ON DATABASE  ABBVIE_DATAOPS_DEV       TO ROLE ABBVIE_DATAOPS_DEPLOY;
+-- Database-level grants. CREATE SCHEMA is required because schemachange's
+-- V1.1.1__initial_objects.sql executes `CREATE SCHEMA IF NOT EXISTS CURATED`.
+-- MODIFY/MONITOR keep ALTER DATABASE-style operations available to CI.
+GRANT USAGE, MODIFY, MONITOR, CREATE SCHEMA
+    ON DATABASE ABBVIE_DATAOPS_DEV
+    TO ROLE ABBVIE_DATAOPS_DEPLOY;
 GRANT ALL   ON SCHEMA    ABBVIE_DATAOPS_DEV.CURATED      TO ROLE ABBVIE_DATAOPS_DEPLOY;
 GRANT ALL   ON SCHEMA    ABBVIE_DATAOPS_DEV.SCHEMACHANGE TO ROLE ABBVIE_DATAOPS_DEPLOY;
 
@@ -59,23 +64,30 @@ GRANT SELECT, INSERT, UPDATE, DELETE
 
 -- ---------------------------------------------------------------------------
 -- 3. OIDC service users for GitHub Actions
---    Subject claims must match the running workflow's repo + ref.
---    Repo: sfc-gh-palapaty/abbvie-dataops-sdk
+--
+-- IMPORTANT: GitHub stamps the OIDC JWT subject based on the *workflow trigger
+-- context*. snowflake-deploy.yml declares `environment: dev`, so the subject
+-- arrives as `repo:<owner>/<repo>:environment:dev`, NOT
+-- `:ref:refs/heads/main`. The main-branch user therefore matches on the
+-- environment claim (the only safe one when an Actions environment is used).
+-- See: https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/about-security-hardening-with-openid-connect#example-subject-claims
+--
+--   Repo: sfc-gh-palapaty/abbvie-dataops-sdk
 -- ---------------------------------------------------------------------------
 CREATE OR REPLACE USER GH_CICD_USER
     TYPE = SERVICE
     WORKLOAD_IDENTITY = (
         TYPE = OIDC
         ISSUER = 'https://token.actions.githubusercontent.com'
-        SUBJECT = 'repo:sfc-gh-palapaty/abbvie-dataops-sdk:ref:refs/heads/main'
+        SUBJECT = 'repo:sfc-gh-palapaty/abbvie-dataops-sdk:environment:dev'
     )
     DEFAULT_ROLE = ABBVIE_DATAOPS_DEPLOY
     DEFAULT_WAREHOUSE = ABBVIE_DATAOPS_WH
-    COMMENT = 'GitHub Actions OIDC service user for main branch deploys';
+    COMMENT = 'GitHub Actions OIDC service user for `environment: dev` deploys';
 
 GRANT ROLE ABBVIE_DATAOPS_DEPLOY TO USER GH_CICD_USER;
 
--- PR previews (read-only style runs invoked from non-main branches)
+-- PR previews (workflows triggered by `pull_request`, no environment set)
 CREATE OR REPLACE USER GH_CICD_USER_PR
     TYPE = SERVICE
     WORKLOAD_IDENTITY = (

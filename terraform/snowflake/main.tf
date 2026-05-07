@@ -35,7 +35,7 @@ variable "deploy_role_name" {
 variable "github_subject" {
   type        = string
   description = "GitHub OIDC subject claim for the service user (e.g. repo:org/repo:ref:refs/heads/main)"
-  default     = "repo:sfc-gh-palapaty/abbvie-dataops-sdk:ref:refs/heads/main"
+  default     = "repo:sfc-gh-palapaty/abbvie-dataops-sdk:environment:dev"
 }
 
 resource "snowflake_warehouse" "wh" {

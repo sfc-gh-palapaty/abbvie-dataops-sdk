@@ -17,7 +17,7 @@ CREATE OR REPLACE USER GH_CICD_USER
   WORKLOAD_IDENTITY = (
     TYPE = OIDC
     ISSUER = 'https://token.actions.githubusercontent.com'
-    SUBJECT = 'repo:sfc-gh-palapaty/abbvie-dataops-sdk:ref:refs/heads/main'
+    SUBJECT = 'repo:sfc-gh-palapaty/abbvie-dataops-sdk:environment:dev'
   )
   DEFAULT_ROLE = ABBVIE_DATAOPS_DEPLOY
   DEFAULT_WAREHOUSE = ABBVIE_DATAOPS_WH;
