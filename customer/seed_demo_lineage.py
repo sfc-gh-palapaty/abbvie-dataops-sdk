@@ -323,14 +323,21 @@ def _dh_schema(table_name: str, columns: dict[str, str], platform: str) -> dict[
 def emit_datahub_dataset(ds: dict[str, Any], upstream_urns: list[str]) -> None:
     urn = _ds_urn(ds)
 
+    # NOTE: datasetProperties.uri is typed as a strict java.net.URI in the
+    # DataHub PDL schema. If we set it to an unqualified table name like
+    # `abbvie_dataops_poc_curated.accounts` GMS deserialization later crashes
+    # with TemplateOutputCastException, and the GraphQL searchAcrossEntities
+    # batch loader fails, blanking the search results UI. Omit `uri` and use
+    # `customProperties` instead.
     statuses = [
         _dh_post(_dh_envelope(urn, "datasetProperties", {
             "description": ds["description"],
             "customProperties": {
                 "ol_namespace": ds["ol_namespace"],
                 "ol_name": ds["ol_name"],
+                "platform": ds["dh_platform"],
+                "physical_name": ds["dh_name"],
             },
-            "uri": ds["dh_name"],
             "tags": [],
         })),
         _dh_post(_dh_envelope(urn, "schemaMetadata", _dh_schema(ds["dh_name"], ds["columns"], ds["dh_platform"]))),
