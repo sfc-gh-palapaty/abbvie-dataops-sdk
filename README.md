@@ -79,12 +79,10 @@ flowchart LR
 
 ## VP demo runbook (talk track + click-by-click flow)
 
-For executive demos, use **[`customer/VP_DEMO_RUNBOOK.md`](customer/VP_DEMO_RUNBOOK.md)** — it contains:
+For executive demos, use:
 
-- 12-min talk track (developer push → PR gate → merge → lineage)
-- 10-min live demo flow with the 7 browser tabs to pre-open
-- Anticipated VP questions + crisp answers
-- 30-min pre-flight checklist (re-seed lineage, sanity-check the EC2)
+- **[`customer/VP_DEMO_RUNBOOK.md`](customer/VP_DEMO_RUNBOOK.md)** — full talk track + click-by-click flow + anticipated Q&A + pre-flight checklist
+- **[`customer/QUICK_REFERENCE.md`](customer/QUICK_REFERENCE.md)** — one-page cheat sheet (URLs, creds, 7 demo beats, the lineage chain) — keep on a 2nd monitor during the meeting
 
 Live PoC endpoints:
 - DataHub UI: `http://34.205.77.61:9002` (`datahub` / `datahub`)
