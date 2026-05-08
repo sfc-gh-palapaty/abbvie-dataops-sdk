@@ -77,6 +77,20 @@ flowchart LR
 | `.github/workflows/` | `snowflake-deploy`, `emr-deploy`, `suitecrm-deploy`, `pr-governance`, `sdk-ci` |
 | `customer/` | Customer-facing write-up + architecture diagrams |
 
+## VP demo runbook (talk track + click-by-click flow)
+
+For executive demos, use **[`customer/VP_DEMO_RUNBOOK.md`](customer/VP_DEMO_RUNBOOK.md)** — it contains:
+
+- 12-min talk track (developer push → PR gate → merge → lineage)
+- 10-min live demo flow with the 7 browser tabs to pre-open
+- Anticipated VP questions + crisp answers
+- 30-min pre-flight checklist (re-seed lineage, sanity-check the EC2)
+
+Live PoC endpoints:
+- DataHub UI: `http://34.205.77.61:9002` (`datahub` / `datahub`)
+- Marquez UI: `http://34.205.77.61:13000`
+- GitHub Actions: `https://github.com/sfc-gh-palapaty/abbvie-dataops-sdk/actions`
+
 ## Quick start
 
 ```bash
