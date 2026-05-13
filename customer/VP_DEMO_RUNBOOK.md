@@ -81,7 +81,7 @@ Open these tabs in order *before* the meeting starts so you don't fumble:
 |---|---|---|
 | T1 | GitHub repo `main` | `https://github.com/sfc-gh-palapaty/abbvie-dataops-sdk` |
 | T2 | GitHub Actions list | `https://github.com/sfc-gh-palapaty/abbvie-dataops-sdk/actions` |
-| T3 | A merged PR (the schema-drift demo) | open the most recent merged PR |
+| T3 | Merged PR #1 (the schema-drift demo) | `https://github.com/sfc-gh-palapaty/abbvie-dataops-sdk/pull/1` — contains both the broken commit (`8ab7d28`) and the contract-fix commit (`4d91e57`) so beats B and C come from one PR |
 | T4 | DataHub — **mysql** SuiteCRM source | `http://34.205.77.61:9002/dataset/urn%3Ali%3Adataset%3A%28urn%3Ali%3AdataPlatform%3Amysql%2Csuitecrm.public.accounts%2CPROD%29` |
 | T5 | DataHub — **snowflake** governance view | `http://34.205.77.61:9002/dataset/urn%3Ali%3Adataset%3A%28urn%3Ali%3AdataPlatform%3Asnowflake%2Cabbvie_dataops_dev.curated.v_accounts_governed%2CPROD%29` |
 | T6 | Marquez UI | `http://34.205.77.61:13000` |

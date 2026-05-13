@@ -45,7 +45,7 @@ curl -fsS http://34.205.77.61:5000/api/v1/namespaces | head -c 80
 |---|---|---|
 | **T1** | Repo `main` | https://github.com/sfc-gh-palapaty/abbvie-dataops-sdk |
 | **T2** | Actions list | https://github.com/sfc-gh-palapaty/abbvie-dataops-sdk/actions |
-| **T3** | The merged schema-drift PR | open most-recent merged PR |
+| **T3** | The merged schema-drift PR (#1) | https://github.com/sfc-gh-palapaty/abbvie-dataops-sdk/pull/1 |
 | **T4** | DataHub — SuiteCRM (mysql) source | http://34.205.77.61:9002/dataset/urn%3Ali%3Adataset%3A%28urn%3Ali%3AdataPlatform%3Amysql%2Csuitecrm.public.accounts%2CPROD%29 |
 | **T5** | DataHub — Snowflake governance view | http://34.205.77.61:9002/dataset/urn%3Ali%3Adataset%3A%28urn%3Ali%3AdataPlatform%3Asnowflake%2Cabbvie_dataops_dev.curated.v_accounts_governed%2CPROD%29 |
 | **T6** | Marquez UI | http://34.205.77.61:13000 |
