@@ -19,7 +19,7 @@ SELECT
         WHEN a.ANNUAL_REVENUE IS NULL       THEN NULL
         ELSE '<10M'
     END                                                       AS ANNUAL_REVENUE_BUCKETED,
-    SHA2(a.EMAIL, 256)::VARCHAR(16)                          AS EMAIL_TOKENIZED,
+    LEFT(SHA2(a.EMAIL, 256), 16)                              AS EMAIL_TOKENIZED,
     CASE WHEN a.PHONE   IS NULL THEN NULL ELSE '***-***-' || RIGHT(a.PHONE, 4) END  AS PHONE_TOKENIZED,
     REGEXP_REPLACE(REGEXP_REPLACE(a.WEBSITE, '^https?://', ''), '/.*$', '')         AS WEBSITE_DOMAIN_ONLY,
     a.CREATED_AT,
