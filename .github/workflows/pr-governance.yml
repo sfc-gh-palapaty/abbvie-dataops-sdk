@@ -16,6 +16,15 @@ permissions:
 jobs:
   data-change-gate:
     runs-on: ubuntu-latest
+    # PR-time gate runs OFFLINE. We do not configure AWS credentials here
+    # because PRs from forks would otherwise expose prod secrets. The SDK
+    # adapters detect `profile=develop` and skip any Secrets Manager reads.
+    # AWS_REGION is set defensively so any boto3 client that does get
+    # constructed (e.g. for a future adapter) at least has a region and
+    # surfaces a clear "no credentials" error instead of NoRegionError.
+    env:
+      AWS_REGION: us-east-1
+      AWS_DEFAULT_REGION: us-east-1
     steps:
       - name: Checkout (full history)
         uses: actions/checkout@v4
