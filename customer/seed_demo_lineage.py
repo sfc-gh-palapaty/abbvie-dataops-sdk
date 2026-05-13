@@ -58,6 +58,7 @@ ACCOUNT_COLS_MYSQL: dict[str, str] = {
     "annual_revenue": "DECIMAL(18,2)",
     "email": "VARCHAR(255)",
     "phone": "VARCHAR(64)",
+    "website": "VARCHAR(255)",
     "date_entered": "DATETIME",
     "date_modified": "DATETIME",
 }
@@ -68,6 +69,7 @@ ACCOUNT_COLS_PARQUET: dict[str, str] = {
     "annual_revenue": "decimal(18,2)",
     "email": "string",
     "phone": "string",
+    "website": "string",
     "created_at": "timestamp",
     "updated_at": "timestamp",
 }
@@ -79,6 +81,7 @@ ACCOUNT_COLS_SNOWFLAKE: dict[str, str] = {
     "ANNUAL_REVENUE": "NUMBER(18,2)",
     "EMAIL": "VARCHAR",
     "PHONE": "VARCHAR",
+    "WEBSITE": "VARCHAR",
     "CREATED_AT": "TIMESTAMP_NTZ",
     "UPDATED_AT": "TIMESTAMP_NTZ",
 }
@@ -89,6 +92,7 @@ VIEW_COLS_SNOWFLAKE: dict[str, str] = {
     "ANNUAL_REVENUE_BUCKETED": "VARCHAR",
     "EMAIL_TOKENIZED": "VARCHAR",
     "PHONE_TOKENIZED": "VARCHAR",
+    "WEBSITE_DOMAIN_ONLY": "VARCHAR",
     "UPDATED_AT": "TIMESTAMP_NTZ",
 }
 
