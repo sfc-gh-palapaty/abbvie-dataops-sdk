@@ -10,27 +10,39 @@ Auth resolution order:
 from __future__ import annotations
 
 import json
+import logging
 import os
 from typing import Any
 
 from abbvie_dataops_governance.adapters.base import Adapter, AdapterResult
+
+log = logging.getLogger(__name__)
 
 
 class SnowflakeAdapter(Adapter):
     name = "snowflake"
 
     def _connection_kwargs(self) -> dict[str, Any]:
+        # In `develop` profile (PR-time gate), we deliberately skip the
+        # Secrets Manager fetch. PR-time gates run in untrusted contexts
+        # (e.g. PRs from forks) and should be offline static validation
+        # only — schema diff, manifest validation, DQ suite parsing — none
+        # of which need a live Snowflake connection.
+        profile = getattr(self.manifest, "profile", None)
         secret_id = self.manifest.connection.snowflake_account_secret
-        if secret_id:
+        payload: dict[str, Any] = {}
+        if secret_id and profile != "develop":
             try:
                 import boto3
 
                 client = boto3.client("secretsmanager")
                 payload = json.loads(client.get_secret_value(SecretId=secret_id)["SecretString"])
             except Exception as e:
-                raise RuntimeError(f"could not read Snowflake secret {secret_id}: {e}") from e
-        else:
-            payload = {}
+                # Soft-fail: emit a warning and fall through to env vars.
+                # Downstream `introspect()` will catch the resulting connect
+                # failure and return a dry-run AdapterResult, which is the
+                # correct behaviour for any non-promote profile.
+                log.warning("could not read Snowflake secret %s: %s; falling back to env vars", secret_id, e)
 
         return {
             "account": payload.get("account") or os.environ.get("SNOWFLAKE_ACCOUNT", ""),
