@@ -41,6 +41,11 @@
       "name": "PHONE",
       "data_type": "VARCHAR",
       "nullable": true
+    },
+    {
+      "name": "WEBSITE",
+      "data_type": "VARCHAR",
+      "nullable": true
     }
   ]
 }
