@@ -81,7 +81,7 @@ Open these tabs in order *before* the meeting starts so you don't fumble:
 |---|---|---|
 | T1 | GitHub repo `main` | `https://github.com/sfc-gh-palapaty/abbvie-dataops-sdk` |
 | T2 | GitHub Actions list | `https://github.com/sfc-gh-palapaty/abbvie-dataops-sdk/actions` |
-| T3 | Merged PR #1 (the schema-drift demo) | `https://github.com/sfc-gh-palapaty/abbvie-dataops-sdk/pull/1` — contains both the broken commit (`8ab7d28`) and the contract-fix commit (`4d91e57`) so beats B and C come from one PR |
+| T3 | Merged PR #2 (canonical schema-drift demo) | `https://github.com/sfc-gh-palapaty/abbvie-dataops-sdk/pull/2` — contains the broken commit (`4cd73fe`, missing schema contract) and the contract-fix commit (`2eb02f5`, adds `WEBSITE` to `accounts.json`) so beats B and C come from one PR. PR #1 (PHONE) is the older equivalent if you ever need a backup. |
 | T4 | DataHub — **mysql** SuiteCRM source | `http://34.205.77.61:9002/dataset/urn%3Ali%3Adataset%3A%28urn%3Ali%3AdataPlatform%3Amysql%2Csuitecrm.public.accounts%2CPROD%29` |
 | T5 | DataHub — **snowflake** governance view | `http://34.205.77.61:9002/dataset/urn%3Ali%3Adataset%3A%28urn%3Ali%3AdataPlatform%3Asnowflake%2Cabbvie_dataops_dev.curated.v_accounts_governed%2CPROD%29` |
 | T6 | Marquez UI | `http://34.205.77.61:13000` |
@@ -91,11 +91,12 @@ Open these tabs in order *before* the meeting starts so you don't fumble:
 
 #### Step A — "Developer raises a PR" (T1, T2 — 90 sec)
 
-> "Developer ticket says *add `phone` column to the curated `ACCOUNTS` table*. They write a `schemachange` migration and push a branch."
+> "Developer ticket says *add `website` column to the curated `ACCOUNTS` table*. They write a `schemachange` migration and push a branch."
 
 Show in T1:
-- `migrations/snowflake/V1.2.0__add_phone.sql` — the SQL DDL change
+- `migrations/snowflake/V1.3.0__add_website.sql` — the SQL DDL change
 - `manifests/snowflake-curated.yaml` — the manifest that **declares** the contract this asset must satisfy
+- (Optional sidebar) `migrations/snowflake/V1.2.0__add_phone.sql` is the *previous* demo column from PR #1 — proves the pattern is repeatable
 
 Click into the manifest and read the top half out loud — *expected schema*, *DQ suite*, *tokenization policy*. **This is the entire developer contract.**
 
@@ -119,10 +120,10 @@ Open the **broken PR** (or pull up the screenshot of `pr-governance` failing). P
 
 #### Step C — "Developer fixes the contract" (T3 — 60 sec)
 
-Show the follow-up commit:
-- `manifests/schemas/snowflake/accounts.json` — `PHONE` is now present in the expected columns.
+Show the follow-up commit (`2eb02f5`):
+- `manifests/schemas/snowflake/accounts.json` — `WEBSITE` is now present in the expected columns (5-line diff).
 
-PR check goes **green**. Bot comment now reads `must_fail_closed: false`. PR can merge.
+PR check goes **green** in ~45 seconds. Bot comment now reads `must_fail_closed: false`. PR can merge.
 
 > "One commit. The contract is now part of the change. Audit gets a permanent artifact (the evidence bundle) on the PR."
 
@@ -139,6 +140,28 @@ Click the **`snowflake-deploy`** workflow run. Walk through the steps in the log
 
 > "Three things are now true that weren't true before merge:  
 > a) the table has the new column, b) DataHub has fresh metadata + tags + ownership for it, c) Marquez has a START/COMPLETE event timestamped to this run."
+
+#### Step D-bis — "And the data actually changed in Snowflake" (terminal — 90 sec, optional but powerful)
+
+Drop to a terminal:
+
+```bash
+snow sql -c default -q "
+USE DATABASE ABBVIE_DATAOPS_DEV; USE SCHEMA CURATED;
+SELECT ID, NAME, INDUSTRY, EMAIL, PHONE, WEBSITE FROM ACCOUNTS ORDER BY ID;
+SELECT ID, NAME, ANNUAL_REVENUE_BUCKETED, EMAIL_TOKENIZED, PHONE_TOKENIZED, WEBSITE_DOMAIN_ONLY
+FROM V_ACCOUNTS_GOVERNED ORDER BY ID;
+SELECT VERSION, SCRIPT, STATUS, INSTALLED_BY, INSTALLED_ON
+FROM SCHEMACHANGE.CHANGE_HISTORY ORDER BY INSTALLED_ON DESC LIMIT 5;
+"
+```
+
+Three things land for the VP:
+1. **Raw data** — the new `WEBSITE` column is populated (e.g. `https://northwind.example.com`).
+2. **Governance overlay** — `V_ACCOUNTS_GOVERNED` exposes `WEBSITE_DOMAIN_ONLY` (e.g. `northwind.example.com`) automatically. The repeatable migration `R__curated_accounts_view.sql` replayed in the same deploy.
+3. **Immutable audit trail** — `SCHEMACHANGE.CHANGE_HISTORY` shows `V1.3.0__add_website.sql` with `STATUS=Success` and `INSTALLED_BY=GH_CICD_USER` (the OIDC-authenticated GitHub Actions identity).
+
+> "That `GH_CICD_USER` row is the audit. No human ran this DDL. GitHub Actions authenticated via OIDC, the gate passed, schemachange applied the change, and Snowflake wrote the audit row in the same transaction. This is the regulator answer."
 
 #### Step E — "End-to-end lineage in DataHub" (T4 — 2 min)
 
@@ -158,7 +181,7 @@ mysql (SuiteCRM)  →  s3 (raw)  →  glue/iceberg (curated)  →  snowflake (cu
 
 > "Five platforms, one graph. **Every edge here was emitted by the SDK during a real CI run** — nothing hand-curated. Click any node — owners, classification:confidential tag, full schema. Click the governance view at the right end — emails are now `EMAIL_TOKENIZED`, revenue is bucketed, that's the tokenization policy from the manifest enforced into the view."
 
-Click the **`v_accounts_governed`** node → schema panel → highlight `EMAIL_TOKENIZED`, `PHONE_TOKENIZED`, `ANNUAL_REVENUE_BUCKETED`.
+Click the **`v_accounts_governed`** node → schema panel → highlight `EMAIL_TOKENIZED`, `PHONE_TOKENIZED`, `WEBSITE_DOMAIN_ONLY`, `ANNUAL_REVENUE_BUCKETED`.
 
 > "An auditor lands here, sees: who owns it, what the upstreams are, that the sensitive columns are masked, and which CI run produced it. *That's the one auditable view.*"
 

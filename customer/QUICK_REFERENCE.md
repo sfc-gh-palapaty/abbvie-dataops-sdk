@@ -45,7 +45,7 @@ curl -fsS http://34.205.77.61:5000/api/v1/namespaces | head -c 80
 |---|---|---|
 | **T1** | Repo `main` | https://github.com/sfc-gh-palapaty/abbvie-dataops-sdk |
 | **T2** | Actions list | https://github.com/sfc-gh-palapaty/abbvie-dataops-sdk/actions |
-| **T3** | The merged schema-drift PR (#1) | https://github.com/sfc-gh-palapaty/abbvie-dataops-sdk/pull/1 |
+| **T3** | The merged schema-drift PR (#2 — canonical) | https://github.com/sfc-gh-palapaty/abbvie-dataops-sdk/pull/2 |
 | **T4** | DataHub — SuiteCRM (mysql) source | http://34.205.77.61:9002/dataset/urn%3Ali%3Adataset%3A%28urn%3Ali%3AdataPlatform%3Amysql%2Csuitecrm.public.accounts%2CPROD%29 |
 | **T5** | DataHub — Snowflake governance view | http://34.205.77.61:9002/dataset/urn%3Ali%3Adataset%3A%28urn%3Ali%3AdataPlatform%3Asnowflake%2Cabbvie_dataops_dev.curated.v_accounts_governed%2CPROD%29 |
 | **T6** | Marquez UI | http://34.205.77.61:13000 |
@@ -59,15 +59,36 @@ curl -fsS http://34.205.77.61:5000/api/v1/namespaces | head -c 80
 
 | Beat | Tab | What you say + click |
 |---|---|---|
-| **A** Developer push | T1 | Show `migrations/snowflake/V1.2.0__add_phone.sql` + `manifests/snowflake-curated.yaml`. *"This is the entire developer contract."* |
-| **B** PR fails closed | T3 | Red `pr-governance` check + bot comment with `must_fail_closed: true`. *"Path-based gate. Fast. Free."* |
-| **C** Contract fix | T3 | Show the follow-up commit adding `PHONE` to `manifests/schemas/snowflake/accounts.json`. Check goes green. |
-| **D** Merge → deploy | T2 | `snowflake-deploy` log: OIDC → schemachange → SDK promote → evidence bundle. |
-| **E** End-to-end lineage | T4 | Click `+` four times: `mysql → s3 → glue → snowflake → snowflake_view`. End on `v_accounts_governed` schema (`EMAIL_TOKENIZED`, `PHONE_TOKENIZED`, `ANNUAL_REVENUE_BUCKETED`). |
+| **A** Developer push | T1 | Show `migrations/snowflake/V1.3.0__add_website.sql` + `manifests/snowflake-curated.yaml`. *"This is the entire developer contract."* |
+| **B** PR fails closed | T3 | Red `pr-governance` check on commit `4cd73fe` + bot comment with `must_fail_closed: true`, blocker `changes under 'migrations/snowflake/' require an updated contract`. *"Path-based gate. Fast. Free. Ran in 29 seconds."* |
+| **C** Contract fix | T3 | Show the follow-up commit `2eb02f5` adding `WEBSITE` to `manifests/schemas/snowflake/accounts.json`. Gate flips green in 45s; bot comment now shows `must_fail_closed: false`. |
+| **D** Merge → deploy | T2 | `snowflake-deploy` run `25831442352`: OIDC → schemachange (`V1.3.0__add_website.sql Success`) → SDK promote → evidence bundle. |
+| **E** End-to-end lineage | T4 | Click `+` four times: `mysql → s3 → glue → snowflake → snowflake_view`. End on `v_accounts_governed` schema (`EMAIL_TOKENIZED`, `PHONE_TOKENIZED`, `WEBSITE_DOMAIN_ONLY`, `ANNUAL_REVENUE_BUCKETED`). |
 | **F** Run history | T6 | Switch namespaces `abbvie.suitecrm / s3 / glue / snowflake`. *"DataHub = what exists. Marquez = what ran."* |
 | **G** Reproducibility | IDE | Wave at `terraform/`, `apps/datahub/bootstrap.sh`, `docs/SNOWFLAKE_BOOTSTRAP.sql`. *"No special snowflake."* |
 
 ---
+
+## Snowflake before vs. after (the data proof)
+
+Run on `default` connection (`palapaty` / `ACCOUNTADMIN`).
+
+```bash
+snow sql -c default -q "
+USE DATABASE ABBVIE_DATAOPS_DEV; USE SCHEMA CURATED;
+SELECT COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_SCHEMA='CURATED' AND TABLE_NAME='ACCOUNTS' ORDER BY ORDINAL_POSITION;
+SELECT ID, NAME, INDUSTRY, EMAIL, PHONE, WEBSITE FROM ACCOUNTS ORDER BY ID;
+SELECT ID, NAME, ANNUAL_REVENUE_BUCKETED, EMAIL_TOKENIZED, PHONE_TOKENIZED, WEBSITE_DOMAIN_ONLY
+FROM V_ACCOUNTS_GOVERNED ORDER BY ID;
+SELECT VERSION, SCRIPT, STATUS, INSTALLED_BY, INSTALLED_ON
+FROM SCHEMACHANGE.CHANGE_HISTORY ORDER BY INSTALLED_ON DESC LIMIT 5;
+"
+```
+
+**Expected:** `ACCOUNTS.WEBSITE` exists at ordinal 9; `V_ACCOUNTS_GOVERNED.WEBSITE_DOMAIN_ONLY` exists and shows `northwind.example.com` etc; `CHANGE_HISTORY` shows `V1.3.0__add_website.sql` with `Success` and `INSTALLED_BY=GH_CICD_USER`.
+
+> **Talking point:** *"That `GH_CICD_USER` is GitHub Actions authenticating via OIDC. No keys, no rotation, no passwords. The audit row in `SCHEMACHANGE.CHANGE_HISTORY` is the immutable proof that the change went through the gate."*
 
 ## Lineage chain (memorize)
 
@@ -86,7 +107,7 @@ Snowflake curated
         ↓  snowflake.curated.v_accounts_governed.refresh
 Snowflake governance view (BI-safe)
   └─ abbvie_dataops_dev.curated.v_accounts_governed
-       (EMAIL_TOKENIZED, PHONE_TOKENIZED, ANNUAL_REVENUE_BUCKETED)
+       (EMAIL_TOKENIZED, PHONE_TOKENIZED, WEBSITE_DOMAIN_ONLY, ANNUAL_REVENUE_BUCKETED)
 ```
 
 ---
