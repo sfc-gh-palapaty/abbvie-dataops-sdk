@@ -81,8 +81,9 @@ flowchart LR
 
 For executive demos, use:
 
-- **[`customer/VP_DEMO_RUNBOOK.md`](customer/VP_DEMO_RUNBOOK.md)** — full talk track + click-by-click flow + anticipated Q&A + pre-flight checklist
+- **[`customer/VP_DEMO_RUNBOOK.md`](customer/VP_DEMO_RUNBOOK.md)** — full talk track + click-by-click flow + anticipated Q&A + pre-flight checklist (~30 min live demo)
 - **[`customer/QUICK_REFERENCE.md`](customer/QUICK_REFERENCE.md)** — one-page cheat sheet (URLs, creds, 7 demo beats, the lineage chain) — keep on a 2nd monitor during the meeting
+- **[`customer/VP_5MIN_RECORDING_SCRIPT.md`](customer/VP_5MIN_RECORDING_SCRIPT.md)** — 5-minute executive recording script with screen choreography, timings, and recording tips
 
 Live PoC endpoints:
 - DataHub UI: `http://34.205.77.61:9002` (`datahub` / `datahub`)
