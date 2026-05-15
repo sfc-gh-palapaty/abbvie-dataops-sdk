@@ -131,6 +131,4 @@ Each new source is a new adapter (~150 lines of Python) + a manifest. The CI/CD 
 
 ---
 
-## Reach out
 
-For questions or to take this deeper with your team, contact the project sponsor or open an issue in this repository.
