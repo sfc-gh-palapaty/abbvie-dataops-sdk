@@ -30,7 +30,7 @@ flowchart LR
     MFST[manifests/*.yaml]
   end
 
-  subgraph AWS["AWS account 194722405805 (us-east-1)"]
+  subgraph AWS["AWS account <AWS_ACCOUNT_ID> (us-east-1)"]
     OIDC[OIDC IAM role]
     S3[(S3 raw / curated / lineage / artifacts)]
     GLUE[(Glue + Iceberg)]
@@ -84,14 +84,14 @@ flowchart LR
 - **Architecture diagrams**: [`customer/POC_ARCHITECTURE.md`](customer/POC_ARCHITECTURE.md)
 
 Live PoC endpoints:
-- DataHub UI: `http://34.205.77.61:9002` (`datahub` / `datahub`)
-- Marquez UI: `http://34.205.77.61:13000`
+- DataHub UI: `http://<DATAHUB_EC2_PUBLIC_IP>:9002` (credentials provisioned separately)
+- Marquez UI: `http://<DATAHUB_EC2_PUBLIC_IP>:13000`
 - GitHub Actions: `https://github.com/sfc-gh-palapaty/abbvie-dataops-sdk/actions`
 
 ## Quick start
 
 ```bash
-# 0. AWS creds (the user-provided STS credentials for account 194722405805)
+# 0. AWS creds (STS credentials for your target account)
 export AWS_REGION=us-east-1
 export AWS_ACCESS_KEY_ID=...
 export AWS_SECRET_ACCESS_KEY=...

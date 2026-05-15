@@ -22,8 +22,9 @@ the walkthrough shows real edges in both UIs:
 
 Run from the repo root with the live endpoints exported:
 
-    OPENLINEAGE_URL=http://34.205.77.61:5000 \
-    DATAHUB_GMS_URL=http://34.205.77.61:8000 \
+    OPENLINEAGE_URL=http://<DATAHUB_EC2_PUBLIC_IP>:5000 \
+    DATAHUB_GMS_URL=http://<DATAHUB_EC2_PUBLIC_IP>:8000 \
+    AWS_ACCOUNT_ID=<your-12-digit-aws-account-id> \
     python customer/seed_demo_lineage.py
 
 Idempotent: re-runs append fresh COMPLETE runs, which is what the timeline UI shows.
@@ -42,8 +43,9 @@ import requests
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
-OL_URL = os.environ.get("OPENLINEAGE_URL", "http://34.205.77.61:5000").rstrip("/")
-DH_URL = os.environ.get("DATAHUB_GMS_URL", "http://34.205.77.61:8000").rstrip("/")
+OL_URL = os.environ.get("OPENLINEAGE_URL", "http://localhost:5000").rstrip("/")
+DH_URL = os.environ.get("DATAHUB_GMS_URL", "http://localhost:8000").rstrip("/")
+AWS_ACCOUNT_ID = os.environ.get("AWS_ACCOUNT_ID", "123456789012")
 PRODUCER = "https://github.com/sfc-gh-palapaty/abbvie-dataops-sdk"
 SCHEMA_URL = "https://openlineage.io/spec/1-0-5/OpenLineage.json#/definitions/RunEvent"
 
@@ -117,7 +119,7 @@ DATASETS: list[dict[str, Any]] = [
         "ol_namespace": "abbvie.s3",
         "ol_name": "abbvie-dataops-poc-raw/suitecrm/accounts",
         "dh_platform": "s3",
-        "dh_name": "abbvie-dataops-poc-raw-194722405805/suitecrm/accounts",
+        "dh_name": f"abbvie-dataops-poc-raw-{AWS_ACCOUNT_ID}/suitecrm/accounts",
         "columns": ACCOUNT_COLS_PARQUET,
         "owner": "data-platform",
         "tags": ["classification:confidential", "service:suitecrm-extractor", "zone:raw"],
@@ -396,8 +398,8 @@ def main() -> int:
         emit_openlineage_run(job)
 
     print("\nDone. Browse:")
-    print(f"  Marquez UI : http://34.205.77.61:13000  (namespaces: abbvie.suitecrm, abbvie.s3, abbvie.glue, abbvie.snowflake)")
-    print(f"  DataHub UI : http://34.205.77.61:9002  (search: 'accounts' across mysql/s3/glue/snowflake platforms)")
+    print("  Marquez UI : http://<DATAHUB_EC2_PUBLIC_IP>:13000  (namespaces: abbvie.suitecrm, abbvie.s3, abbvie.glue, abbvie.snowflake)")
+    print("  DataHub UI : http://<DATAHUB_EC2_PUBLIC_IP>:9002  (search: 'accounts' across mysql/s3/glue/snowflake platforms)")
     return 0
 
 

@@ -1,6 +1,6 @@
 # AWS infrastructure for the AbbVie DataOps PoC
 
-Provisions the AWS-side of the PoC in account `194722405805` (us-east-1, where the DataHub EC2 lives):
+Provisions the AWS-side of the PoC (us-east-1, where the DataHub EC2 lives):
 
 - 4 S3 buckets: `raw`, `curated`, `lineage`, `artifacts`
 - 2 Glue databases: `..._bronze`, `..._curated` (Iceberg)

@@ -1,7 +1,7 @@
 -- ============================================================================
 -- AbbVie DataOps PoC -- Snowflake account bootstrap (one-shot)
 --
--- Account: SFSENORTHAMERICA-PHANI_AWS1 (locator FZB62295)
+-- Account: <SNOWFLAKE_ACCOUNT> (locator <SNOWFLAKE_ACCOUNT_LOCATOR>)
 -- Run this entire script ONCE as ACCOUNTADMIN in Snowsight (or via snow CLI).
 -- It is idempotent: safe to re-run.
 --

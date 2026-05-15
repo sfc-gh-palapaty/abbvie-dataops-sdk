@@ -8,7 +8,7 @@ profile: promote
 connection:
   glue_database: abbvie_dataops_poc_curated
   glue_table: accounts
-  s3_uri: s3://abbvie-dataops-poc-curated-194722405805/accounts/
+  s3_uri: s3://abbvie-dataops-poc-curated-<AWS_ACCOUNT_ID>/accounts/
 
 checks:
   schema_enforcement:
