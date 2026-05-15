@@ -77,14 +77,11 @@ flowchart LR
 | `.github/workflows/` | `snowflake-deploy`, `emr-deploy`, `suitecrm-deploy`, `pr-governance`, `sdk-ci` |
 | `customer/` | Customer-facing write-up + architecture diagrams |
 
-## VP demo runbook (talk track + click-by-click flow)
+## Walkthrough
 
-For executive demos:
-
-- **5-minute walkthrough recording**: [Release v0.1.0-vp-demo](https://github.com/sfc-gh-palapaty/abbvie-dataops-sdk/releases/tag/v0.1.0-vp-demo) · [direct download](https://github.com/sfc-gh-palapaty/abbvie-dataops-sdk/releases/download/v0.1.0-vp-demo/dataops-sdk-vp-demo.mov) (96 MB MOV)
-- **[`customer/VP_DEMO_RUNBOOK.md`](customer/VP_DEMO_RUNBOOK.md)** — full talk track + click-by-click flow + anticipated Q&A + pre-flight checklist (~30 min live demo)
-- **[`customer/QUICK_REFERENCE.md`](customer/QUICK_REFERENCE.md)** — one-page cheat sheet (URLs, creds, 7 demo beats, the lineage chain) — keep on a 2nd monitor during the meeting
-- **[`customer/VP_5MIN_RECORDING_SCRIPT.md`](customer/VP_5MIN_RECORDING_SCRIPT.md)** — 5-minute executive recording script with screen choreography, timings, and recording tips
+- **5-minute walkthrough recording**: [Latest release](https://github.com/sfc-gh-palapaty/abbvie-dataops-sdk/releases/latest) · [direct download](https://github.com/sfc-gh-palapaty/abbvie-dataops-sdk/releases/latest/download/abbvie-dataops-sdk-walkthrough.mov) (96 MB MOV)
+- **Canonical schema-drift demo PR**: [#2 — add WEBSITE column to ACCOUNTS](https://github.com/sfc-gh-palapaty/abbvie-dataops-sdk/pull/2) — shows the fail-closed gate (red), the contract-fix commit (green), and the downstream `snowflake-deploy` run end-to-end.
+- **Architecture diagrams**: [`customer/POC_ARCHITECTURE.md`](customer/POC_ARCHITECTURE.md)
 
 Live PoC endpoints:
 - DataHub UI: `http://34.205.77.61:9002` (`datahub` / `datahub`)

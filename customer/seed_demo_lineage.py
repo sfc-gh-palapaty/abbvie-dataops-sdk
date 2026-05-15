@@ -2,7 +2,7 @@
 
 This drives the live Marquez (OpenLineage backend) + DataHub GMS endpoints
 exposed by the EC2 to publish a complete cross-platform lineage chain so that
-the VP demo shows real edges in both UIs:
+the walkthrough shows real edges in both UIs:
 
     SuiteCRM (mysql)
         suitecrm.public.accounts
