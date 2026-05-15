@@ -5,6 +5,8 @@ SDK**, exercised across **three CI/CD pipelines** (Snowflake, AWS EMR Serverless
 SuiteCRM as the OSS Salesforce analog), all routed through one **DataHub** catalog
 and one **OpenLineage / Marquez** lineage backend running on EC2.
 
+> **New here? Start with [`CUSTOMER_README.md`](CUSTOMER_README.md)** — a 1-page tour with the 5-minute walkthrough video, a self-guided 10-min sequence, and the FAQ. This `README.md` is the operator/contributor reference.
+
 ## What this PoC demonstrates
 
 1. **One SDK, one manifest format**, three platforms — schema enforcement, DQ,
