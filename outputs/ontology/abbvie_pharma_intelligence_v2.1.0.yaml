@@ -1,0 +1,1035 @@
+version: 0.1.1
+semantic_model:
+- name: abbvie_pharma_intelligence
+  description: AbbVie Pharma Intelligence Platform — governed semantic model derived
+    from business documents
+  ai_context: 'Use for AbbVie pharma analytics: patient cohorts, prescription trends,
+    treatment switching, KOL identification, and adverse event analysis. Prefer certified
+    datasets and respect therapy area hierarchy. Example queries: treatment switch
+    rate by therapy area; KOL prescriber concentration by facility.'
+  datasets:
+  - name: patients
+    source: ABBVIE_DATAOPS_DEV.CURATED.patients
+    primary_key:
+    - patient_id
+    description: 'AbbVie pharma entity: patient'
+    fields:
+    - name: patient_id
+      expression:
+        dialects:
+        - dialect: ANSI_SQL
+          expression: patient_id
+        - dialect: SNOWFLAKE
+          expression: patient_id
+      datatype: String
+      dimension:
+        is_time: false
+      description: 'Transform: DIRECT MAP'
+    - name: age
+      expression:
+        dialects:
+        - dialect: ANSI_SQL
+          expression: age
+        - dialect: SNOWFLAKE
+          expression: age
+      datatype: Integer
+      dimension:
+        is_time: false
+      description: 'Age must be >= 18 for biologic eligibility; Transform: DATEDIFF(year,
+        DATE_OF_BIRTH, CURRENT_DATE())'
+    - name: gender
+      expression:
+        dialects:
+        - dialect: ANSI_SQL
+          expression: gender
+        - dialect: SNOWFLAKE
+          expression: gender
+      datatype: String
+      dimension:
+        is_time: false
+      description: 'Transform: DECODE(GENDER_CD, ''M'',''Male'', ''F'',''Female'',
+        ''U'',''Unknown''); Allowed: Male, Female'
+    - name: primary_diagnosis
+      expression:
+        dialects:
+        - dialect: ANSI_SQL
+          expression: primary_diagnosis
+        - dialect: SNOWFLAKE
+          expression: primary_diagnosis
+      datatype: String
+      dimension:
+        is_time: false
+      description: 'Only include confirmed diagnoses (DX_STATUS=''CONFIRMED''); Transform:
+        LOOKUP to ICD10_REF'
+    - name: diagnosis_code
+      expression:
+        dialects:
+        - dialect: ANSI_SQL
+          expression: diagnosis_code
+        - dialect: SNOWFLAKE
+          expression: diagnosis_code
+      datatype: String
+      dimension:
+        is_time: false
+    - name: therapy_area_id
+      expression:
+        dialects:
+        - dialect: ANSI_SQL
+          expression: therapy_area_id
+        - dialect: SNOWFLAKE
+          expression: therapy_area_id
+      datatype: String
+      dimension:
+        is_time: false
+      description: 'Map ICD-10 to therapy area: M05-M06=Rheumatology, L40=Dermatology,
+        K50-K51=GI, C83-C91=HemOnc, G43=Migraine; Transform: DERIVED'
+    - name: enrollment_date
+      expression:
+        dialects:
+        - dialect: ANSI_SQL
+          expression: enrollment_date
+        - dialect: SNOWFLAKE
+          expression: enrollment_date
+      datatype: Date
+      dimension:
+        is_time: true
+    - name: insurance_type
+      expression:
+        dialects:
+        - dialect: ANSI_SQL
+          expression: insurance_type
+        - dialect: SNOWFLAKE
+          expression: insurance_type
+      datatype: String
+      dimension:
+        is_time: false
+      description: 'Transform: CASE WHEN PLAN_TYPE_CD IN (''HMO'',''PPO'',''POS'')
+        THEN ''Commercial'' WHEN PLAN_TYPE_CD=''MCR'' THEN ''Medicare'' WHEN PLAN_TYPE_CD=''MCD''
+        THEN ''Medicaid'' ELSE ''Other'' END; Allowed: Commercial, Medicare, Medicaid,
+        Medicare Advantage'
+    - name: region
+      expression:
+        dialects:
+        - dialect: ANSI_SQL
+          expression: region
+        - dialect: SNOWFLAKE
+          expression: region
+      datatype: String
+      dimension:
+        is_time: false
+      description: 'Allowed: Northeast, Southeast, Midwest, West, Southwest'
+  - name: drugs
+    source: ABBVIE_DATAOPS_DEV.CURATED.drugs
+    primary_key:
+    - drug_id
+    description: 'AbbVie pharma entity: drug'
+    fields:
+    - name: drug_id
+      expression:
+        dialects:
+        - dialect: ANSI_SQL
+          expression: drug_id
+        - dialect: SNOWFLAKE
+          expression: drug_id
+      datatype: String
+      dimension:
+        is_time: false
+      description: 'Group NDC to brand-level using GPI hierarchy; Transform: MAPPED'
+    - name: brand_name
+      expression:
+        dialects:
+        - dialect: ANSI_SQL
+          expression: brand_name
+        - dialect: SNOWFLAKE
+          expression: brand_name
+      datatype: String
+      dimension:
+        is_time: false
+      description: 'Transform: DIRECT MAP'
+    - name: generic_name
+      expression:
+        dialects:
+        - dialect: ANSI_SQL
+          expression: generic_name
+        - dialect: SNOWFLAKE
+          expression: generic_name
+      datatype: String
+      dimension:
+        is_time: false
+    - name: therapy_area_id
+      expression:
+        dialects:
+        - dialect: ANSI_SQL
+          expression: therapy_area_id
+        - dialect: SNOWFLAKE
+          expression: therapy_area_id
+      datatype: String
+      dimension:
+        is_time: false
+      description: 'First 4 digits of GPI determine therapy area assignment; Transform:
+        DERIVED'
+    - name: mechanism_of_action
+      expression:
+        dialects:
+        - dialect: ANSI_SQL
+          expression: mechanism_of_action
+        - dialect: SNOWFLAKE
+          expression: mechanism_of_action
+      datatype: String
+      dimension:
+        is_time: false
+      description: 'Map AHFS to MOA category per medical affairs classification; Transform:
+        LOOKUP to AHFS_REF'
+    - name: route_of_administration
+      expression:
+        dialects:
+        - dialect: ANSI_SQL
+          expression: route_of_administration
+        - dialect: SNOWFLAKE
+          expression: route_of_administration
+      datatype: String
+      dimension:
+        is_time: false
+      description: 'Allowed: Oral, Subcutaneous, IV, Ophthalmic'
+    - name: approval_date
+      expression:
+        dialects:
+        - dialect: ANSI_SQL
+          expression: approval_date
+        - dialect: SNOWFLAKE
+          expression: approval_date
+      datatype: Date
+      dimension:
+        is_time: true
+    - name: patent_expiry
+      expression:
+        dialects:
+        - dialect: ANSI_SQL
+          expression: patent_expiry
+        - dialect: SNOWFLAKE
+          expression: patent_expiry
+      datatype: Date
+      dimension:
+        is_time: false
+    - name: status
+      expression:
+        dialects:
+        - dialect: ANSI_SQL
+          expression: status
+        - dialect: SNOWFLAKE
+          expression: status
+      datatype: String
+      dimension:
+        is_time: false
+      description: 'Allowed: Launch, Growth, Mature'
+  - name: prescribers
+    source: ABBVIE_DATAOPS_DEV.CURATED.prescribers
+    primary_key:
+    - prescriber_id
+    description: 'AbbVie pharma entity: prescriber'
+    fields:
+    - name: prescriber_id
+      expression:
+        dialects:
+        - dialect: ANSI_SQL
+          expression: prescriber_id
+        - dialect: SNOWFLAKE
+          expression: prescriber_id
+      datatype: String
+      dimension:
+        is_time: false
+      description: 'Transform: DIRECT MAP'
+    - name: first_name
+      expression:
+        dialects:
+        - dialect: ANSI_SQL
+          expression: first_name
+        - dialect: SNOWFLAKE
+          expression: first_name
+      datatype: String
+      dimension:
+        is_time: false
+    - name: last_name
+      expression:
+        dialects:
+        - dialect: ANSI_SQL
+          expression: last_name
+        - dialect: SNOWFLAKE
+          expression: last_name
+      datatype: String
+      dimension:
+        is_time: false
+    - name: npi
+      expression:
+        dialects:
+        - dialect: ANSI_SQL
+          expression: npi
+        - dialect: SNOWFLAKE
+          expression: npi
+      datatype: String
+      dimension:
+        is_time: false
+    - name: specialty
+      expression:
+        dialects:
+        - dialect: ANSI_SQL
+          expression: specialty
+        - dialect: SNOWFLAKE
+          expression: specialty
+      datatype: String
+      dimension:
+        is_time: false
+      description: 'Map taxonomy code to specialty name per NUCC reference; Transform:
+        LOOKUP'
+    - name: facility_id
+      expression:
+        dialects:
+        - dialect: ANSI_SQL
+          expression: facility_id
+        - dialect: SNOWFLAKE
+          expression: facility_id
+      datatype: String
+      dimension:
+        is_time: false
+    - name: therapy_area_id
+      expression:
+        dialects:
+        - dialect: ANSI_SQL
+          expression: therapy_area_id
+        - dialect: SNOWFLAKE
+          expression: therapy_area_id
+      datatype: String
+      dimension:
+        is_time: false
+    - name: years_in_practice
+      expression:
+        dialects:
+        - dialect: ANSI_SQL
+          expression: years_in_practice
+        - dialect: SNOWFLAKE
+          expression: years_in_practice
+      datatype: Integer
+      dimension:
+        is_time: false
+    - name: is_kol
+      expression:
+        dialects:
+        - dialect: ANSI_SQL
+          expression: is_kol
+        - dialect: SNOWFLAKE
+          expression: is_kol
+      datatype: Boolean
+      dimension:
+        is_time: false
+      description: 'TRUE if: (publications > 10 in therapy area) OR (clinical trial
+        PI) OR (advisory board member) OR (top 10% prescriber volume); Transform:
+        CALCULATED'
+  - name: facilities
+    source: ABBVIE_DATAOPS_DEV.CURATED.facilities
+    primary_key:
+    - facility_id
+    description: 'AbbVie pharma entity: facility'
+    fields:
+    - name: facility_id
+      expression:
+        dialects:
+        - dialect: ANSI_SQL
+          expression: facility_id
+        - dialect: SNOWFLAKE
+          expression: facility_id
+      datatype: String
+      dimension:
+        is_time: false
+      description: 'Transform: DIRECT MAP'
+    - name: facility_name
+      expression:
+        dialects:
+        - dialect: ANSI_SQL
+          expression: facility_name
+        - dialect: SNOWFLAKE
+          expression: facility_name
+      datatype: String
+      dimension:
+        is_time: false
+    - name: facility_type
+      expression:
+        dialects:
+        - dialect: ANSI_SQL
+          expression: facility_type
+        - dialect: SNOWFLAKE
+          expression: facility_type
+      datatype: String
+      dimension:
+        is_time: false
+      description: 'Allowed: Academic Medical Center, Community Hospital, Specialty
+        Practice, Infusion Center, Specialty Pharmacy'
+    - name: health_system
+      expression:
+        dialects:
+        - dialect: ANSI_SQL
+          expression: health_system
+        - dialect: SNOWFLAKE
+          expression: health_system
+      datatype: String
+      dimension:
+        is_time: false
+      description: 'Map CCN to health system via CMS hospital compare affiliation
+        file; Transform: LOOKUP'
+    - name: address_state
+      expression:
+        dialects:
+        - dialect: ANSI_SQL
+          expression: address_state
+        - dialect: SNOWFLAKE
+          expression: address_state
+      datatype: String
+      dimension:
+        is_time: false
+    - name: region
+      expression:
+        dialects:
+        - dialect: ANSI_SQL
+          expression: region
+        - dialect: SNOWFLAKE
+          expression: region
+      datatype: String
+      dimension:
+        is_time: false
+    - name: bed_count
+      expression:
+        dialects:
+        - dialect: ANSI_SQL
+          expression: bed_count
+        - dialect: SNOWFLAKE
+          expression: bed_count
+      datatype: Integer
+      dimension:
+        is_time: false
+    - name: is_teaching_hospital
+      expression:
+        dialects:
+        - dialect: ANSI_SQL
+          expression: is_teaching_hospital
+        - dialect: SNOWFLAKE
+          expression: is_teaching_hospital
+      datatype: Boolean
+      dimension:
+        is_time: false
+    - name: infusion_center
+      expression:
+        dialects:
+        - dialect: ANSI_SQL
+          expression: infusion_center
+        - dialect: SNOWFLAKE
+          expression: infusion_center
+      datatype: Boolean
+      dimension:
+        is_time: false
+  - name: prescriptions
+    source: ABBVIE_DATAOPS_DEV.CURATED.prescriptions
+    primary_key:
+    - rx_id
+    description: 'AbbVie pharma entity: prescription'
+    fields:
+    - name: rx_id
+      expression:
+        dialects:
+        - dialect: ANSI_SQL
+          expression: rx_id
+        - dialect: SNOWFLAKE
+          expression: rx_id
+      datatype: String
+      dimension:
+        is_time: false
+      description: 'Transform: DIRECT MAP'
+    - name: patient_id
+      expression:
+        dialects:
+        - dialect: ANSI_SQL
+          expression: patient_id
+        - dialect: SNOWFLAKE
+          expression: patient_id
+      datatype: String
+      dimension:
+        is_time: false
+      description: 'Must exist in PATIENTS table; Transform: FK REFERENCE'
+    - name: drug_id
+      expression:
+        dialects:
+        - dialect: ANSI_SQL
+          expression: drug_id
+        - dialect: SNOWFLAKE
+          expression: drug_id
+      datatype: String
+      dimension:
+        is_time: false
+      description: 'Map NDC to brand-level DRUG_ID via product hierarchy; Transform:
+        MAPPED'
+    - name: prescriber_id
+      expression:
+        dialects:
+        - dialect: ANSI_SQL
+          expression: prescriber_id
+        - dialect: SNOWFLAKE
+          expression: prescriber_id
+      datatype: String
+      dimension:
+        is_time: false
+    - name: facility_id
+      expression:
+        dialects:
+        - dialect: ANSI_SQL
+          expression: facility_id
+        - dialect: SNOWFLAKE
+          expression: facility_id
+      datatype: String
+      dimension:
+        is_time: false
+    - name: fill_date
+      expression:
+        dialects:
+        - dialect: ANSI_SQL
+          expression: fill_date
+        - dialect: SNOWFLAKE
+          expression: fill_date
+      datatype: Date
+      dimension:
+        is_time: true
+      description: 'Exclude future dates and dates > 2 years old; Transform: DIRECT
+        MAP'
+    - name: days_supply
+      expression:
+        dialects:
+        - dialect: ANSI_SQL
+          expression: days_supply
+        - dialect: SNOWFLAKE
+          expression: days_supply
+      datatype: Integer
+      dimension:
+        is_time: false
+      description: 'Must be between 1 and 365; flag anomalies > 90 for review; Transform:
+        DIRECT MAP'
+    - name: refill_number
+      expression:
+        dialects:
+        - dialect: ANSI_SQL
+          expression: refill_number
+        - dialect: SNOWFLAKE
+          expression: refill_number
+      datatype: Integer
+      dimension:
+        is_time: false
+    - name: quantity
+      expression:
+        dialects:
+        - dialect: ANSI_SQL
+          expression: quantity
+        - dialect: SNOWFLAKE
+          expression: quantity
+      datatype: Decimal
+      dimension:
+        is_time: false
+    - name: prior_auth_required
+      expression:
+        dialects:
+        - dialect: ANSI_SQL
+          expression: prior_auth_required
+        - dialect: SNOWFLAKE
+          expression: prior_auth_required
+      datatype: Boolean
+      dimension:
+        is_time: false
+    - name: switch_from_drug_id
+      expression:
+        dialects:
+        - dialect: ANSI_SQL
+          expression: switch_from_drug_id
+        - dialect: SNOWFLAKE
+          expression: switch_from_drug_id
+      datatype: String
+      dimension:
+        is_time: false
+      description: 'IF same patient has Rx for different drug in same therapy area
+        within 60 days prior THEN prior drug = switch_from; Transform: CALCULATED'
+    - name: switch_reason
+      expression:
+        dialects:
+        - dialect: ANSI_SQL
+          expression: switch_reason
+        - dialect: SNOWFLAKE
+          expression: switch_reason
+      datatype: String
+      dimension:
+        is_time: false
+      description: 'Infer from diagnosis codes on claims around switch date: adverse
+        event codes=AE, new diagnosis=inadequate response; Transform: DERIVED; Allowed:
+        Inadequate response, Adverse event, Insurance formulary change, Patient preference'
+  - name: therapy_areas
+    source: ABBVIE_DATAOPS_DEV.CURATED.therapy_areas
+    primary_key:
+    - therapy_area_id
+    description: 'AbbVie pharma entity: therapy_area'
+    fields:
+    - name: therapy_area_id
+      expression:
+        dialects:
+        - dialect: ANSI_SQL
+          expression: therapy_area_id
+        - dialect: SNOWFLAKE
+          expression: therapy_area_id
+      datatype: String
+      dimension:
+        is_time: false
+    - name: therapy_area_name
+      expression:
+        dialects:
+        - dialect: ANSI_SQL
+          expression: therapy_area_name
+        - dialect: SNOWFLAKE
+          expression: therapy_area_name
+      datatype: String
+      dimension:
+        is_time: false
+    - name: parent_area
+      expression:
+        dialects:
+        - dialect: ANSI_SQL
+          expression: parent_area
+        - dialect: SNOWFLAKE
+          expression: parent_area
+      datatype: String
+      dimension:
+        is_time: false
+    - name: description
+      expression:
+        dialects:
+        - dialect: ANSI_SQL
+          expression: description
+        - dialect: SNOWFLAKE
+          expression: description
+      datatype: String
+      dimension:
+        is_time: false
+    - name: priority_level
+      expression:
+        dialects:
+        - dialect: ANSI_SQL
+          expression: priority_level
+        - dialect: SNOWFLAKE
+          expression: priority_level
+      datatype: String
+      dimension:
+        is_time: false
+      description: 'Allowed: Primary, Secondary'
+  - name: treatment_pathways
+    source: ABBVIE_DATAOPS_DEV.CURATED.treatment_pathways
+    primary_key:
+    - pathway_id
+    description: 'AbbVie pharma entity: treatment_pathway'
+    fields:
+    - name: pathway_id
+      expression:
+        dialects:
+        - dialect: ANSI_SQL
+          expression: pathway_id
+        - dialect: SNOWFLAKE
+          expression: pathway_id
+      datatype: String
+      dimension:
+        is_time: false
+    - name: therapy_area_id
+      expression:
+        dialects:
+        - dialect: ANSI_SQL
+          expression: therapy_area_id
+        - dialect: SNOWFLAKE
+          expression: therapy_area_id
+      datatype: String
+      dimension:
+        is_time: false
+    - name: diagnosis
+      expression:
+        dialects:
+        - dialect: ANSI_SQL
+          expression: diagnosis
+        - dialect: SNOWFLAKE
+          expression: diagnosis
+      datatype: String
+      dimension:
+        is_time: false
+    - name: line_of_therapy
+      expression:
+        dialects:
+        - dialect: ANSI_SQL
+          expression: line_of_therapy
+        - dialect: SNOWFLAKE
+          expression: line_of_therapy
+      datatype: Integer
+      dimension:
+        is_time: false
+      description: 'Allowed: 1, 2, 3'
+    - name: drug_id
+      expression:
+        dialects:
+        - dialect: ANSI_SQL
+          expression: drug_id
+        - dialect: SNOWFLAKE
+          expression: drug_id
+      datatype: String
+      dimension:
+        is_time: false
+    - name: prior_drug_id
+      expression:
+        dialects:
+        - dialect: ANSI_SQL
+          expression: prior_drug_id
+        - dialect: SNOWFLAKE
+          expression: prior_drug_id
+      datatype: String
+      dimension:
+        is_time: false
+    - name: switch_criteria
+      expression:
+        dialects:
+        - dialect: ANSI_SQL
+          expression: switch_criteria
+        - dialect: SNOWFLAKE
+          expression: switch_criteria
+      datatype: String
+      dimension:
+        is_time: false
+    - name: evidence_level
+      expression:
+        dialects:
+        - dialect: ANSI_SQL
+          expression: evidence_level
+        - dialect: SNOWFLAKE
+          expression: evidence_level
+      datatype: String
+      dimension:
+        is_time: false
+      description: 'Allowed: Level A, Level B, Level C'
+    - name: guideline_source
+      expression:
+        dialects:
+        - dialect: ANSI_SQL
+          expression: guideline_source
+        - dialect: SNOWFLAKE
+          expression: guideline_source
+      datatype: String
+      dimension:
+        is_time: false
+  - name: adverse_events
+    source: ABBVIE_DATAOPS_DEV.CURATED.adverse_events
+    primary_key:
+    - ae_id
+    description: 'AbbVie pharma entity: adverse_event'
+    fields:
+    - name: ae_id
+      expression:
+        dialects:
+        - dialect: ANSI_SQL
+          expression: ae_id
+        - dialect: SNOWFLAKE
+          expression: ae_id
+      datatype: String
+      dimension:
+        is_time: false
+    - name: patient_id
+      expression:
+        dialects:
+        - dialect: ANSI_SQL
+          expression: patient_id
+        - dialect: SNOWFLAKE
+          expression: patient_id
+      datatype: String
+      dimension:
+        is_time: false
+    - name: drug_id
+      expression:
+        dialects:
+        - dialect: ANSI_SQL
+          expression: drug_id
+        - dialect: SNOWFLAKE
+          expression: drug_id
+      datatype: String
+      dimension:
+        is_time: false
+    - name: event_type
+      expression:
+        dialects:
+        - dialect: ANSI_SQL
+          expression: event_type
+        - dialect: SNOWFLAKE
+          expression: event_type
+      datatype: String
+      dimension:
+        is_time: false
+      description: 'Allowed: Infection, Gastrointestinal, Dermatologic, Hepatic, Cardiovascular,
+        Hematologic'
+    - name: event_term
+      expression:
+        dialects:
+        - dialect: ANSI_SQL
+          expression: event_term
+        - dialect: SNOWFLAKE
+          expression: event_term
+      datatype: String
+      dimension:
+        is_time: false
+    - name: severity
+      expression:
+        dialects:
+        - dialect: ANSI_SQL
+          expression: severity
+        - dialect: SNOWFLAKE
+          expression: severity
+      datatype: String
+      dimension:
+        is_time: false
+      description: 'Allowed: Mild, Moderate, Severe'
+    - name: serious
+      expression:
+        dialects:
+        - dialect: ANSI_SQL
+          expression: serious
+        - dialect: SNOWFLAKE
+          expression: serious
+      datatype: Boolean
+      dimension:
+        is_time: false
+    - name: onset_date
+      expression:
+        dialects:
+        - dialect: ANSI_SQL
+          expression: onset_date
+        - dialect: SNOWFLAKE
+          expression: onset_date
+      datatype: Date
+      dimension:
+        is_time: true
+    - name: resolution_date
+      expression:
+        dialects:
+        - dialect: ANSI_SQL
+          expression: resolution_date
+        - dialect: SNOWFLAKE
+          expression: resolution_date
+      datatype: Date
+      dimension:
+        is_time: true
+    - name: outcome
+      expression:
+        dialects:
+        - dialect: ANSI_SQL
+          expression: outcome
+        - dialect: SNOWFLAKE
+          expression: outcome
+      datatype: String
+      dimension:
+        is_time: false
+      description: 'Allowed: Recovered, Recovering, Not recovered, Recovered with
+        sequelae, Unknown'
+    - name: reporter_type
+      expression:
+        dialects:
+        - dialect: ANSI_SQL
+          expression: reporter_type
+        - dialect: SNOWFLAKE
+          expression: reporter_type
+      datatype: String
+      dimension:
+        is_time: false
+      description: 'Allowed: Physician, Patient, Pharmacist'
+    - name: causality_assessment
+      expression:
+        dialects:
+        - dialect: ANSI_SQL
+          expression: causality_assessment
+        - dialect: SNOWFLAKE
+          expression: causality_assessment
+      datatype: String
+      dimension:
+        is_time: false
+      description: 'Allowed: Probable, Possible, Unlikely, Unassessable'
+  relationships:
+  - name: is_diagnosed_with
+    from: patients
+    to: therapy_areas
+    from_columns:
+    - patient_id
+    to_columns:
+    - therapy_area_id
+    description: N:1
+  - name: is_prescribed
+    from: patients
+    to: drugs
+    from_columns:
+    - patient_id
+    to_columns:
+    - drug_id
+    description: N:N via PRESCRIPTION
+  - name: experiences
+    from: patients
+    to: adverse_events
+    from_columns:
+    - patient_id
+    to_columns:
+    - ae_id
+    description: 1:N
+  - name: follows
+    from: patients
+    to: treatment_pathways
+    from_columns:
+    - patient_id
+    to_columns:
+    - pathway_id
+    description: N:1
+  - name: treats
+    from: drugs
+    to: therapy_areas
+    from_columns:
+    - drug_id
+    to_columns:
+    - therapy_area_id
+    description: N:1
+  - name: causes
+    from: drugs
+    to: adverse_events
+    from_columns:
+    - drug_id
+    to_columns:
+    - ae_id
+    description: 1:N
+  - name: prescribes
+    from: prescribers
+    to: drugs
+    from_columns:
+    - prescriber_id
+    to_columns:
+    - drug_id
+    description: N:N via PRESCRIPTION
+  - name: works_at
+    from: prescribers
+    to: facilities
+    from_columns:
+    - prescriber_id
+    to_columns:
+    - facility_id
+    description: N:1
+  - name: specializes_in
+    from: prescribers
+    to: therapy_areas
+    from_columns:
+    - prescriber_id
+    to_columns:
+    - therapy_area_id
+    description: N:1
+  metrics:
+  - name: total_prescriptions
+    expression:
+      dialects:
+      - dialect: ANSI_SQL
+        expression: COUNT(prescriptions.rx_id)
+      - dialect: SNOWFLAKE
+        expression: COUNT(prescriptions.rx_id)
+    description: Total prescription count across the governed pharma model
+    datatype: Integer
+  - name: switch_prescriptions
+    expression:
+      dialects:
+      - dialect: ANSI_SQL
+        expression: COUNT(prescriptions.switch_from_drug_id)
+      - dialect: SNOWFLAKE
+        expression: COUNT(prescriptions.switch_from_drug_id)
+    description: Prescriptions with a treatment switch (switch_from_drug_id populated)
+    datatype: Integer
+  - name: kol_prescriber_count
+    expression:
+      dialects:
+      - dialect: ANSI_SQL
+        expression: COUNT(prescribers.prescriber_id)
+      - dialect: SNOWFLAKE
+        expression: COUNT(prescribers.prescriber_id)
+    description: Prescriber count (filter is_kol in queries)
+    datatype: Integer
+  - name: patients_on_therapy
+    expression:
+      dialects:
+      - dialect: ANSI_SQL
+        expression: COUNT(patients.patient_id)
+      - dialect: SNOWFLAKE
+        expression: COUNT(patients.patient_id)
+    description: Distinct patients in the active cohort
+    datatype: Integer
+  custom_extensions:
+  - vendor_name: ABBVIE
+    data: '{"ontology_version": "2.1.0", "abstract_classes": {"PharmaEntity": ["(all
+      below)"], "TherapeuticProduct": ["Drug"], "CareProvider": ["Prescriber", "Facility"],
+      "CareRecipient": ["Patient"], "ClassificationScheme": ["TherapyArea", "Diagnosis"],
+      "ClinicalEvent": ["Prescription", "AdverseEvent"], "CareGuideline": ["TreatmentPathway"]},
+      "inference_rules": ["INVERSE: If Patient IS_PRESCRIBED Drug, then Drug IS_PRESCRIBED_TO
+      Patient", "INVERSE: If Drug PRECEDES Drug2 in pathway, then Drug2 FOLLOWS Drug",
+      "CHAIN: Patient\u2192Prescription\u2192Drug\u2192TherapyArea => Patient\u2192TherapyArea
+      (inferred)", "CHAIN: Patient\u2192Prescription\u2192Prescriber\u2192Facility
+      => Patient\u2192Facility (inferred: where patient receives care)", "2-STAGE:
+      Patient\u2192Drug\u2192AdverseEvent + Drug\u2192TherapyArea => TherapyArea has
+      safety signal (aggregate inference)", "Inverse Relationships (Bidirectional):
+      If we know A->B, we automatically infer B->A with the inverse predicate. | Known
+      Fact | Inferred Fact | |---|---| | Patient IS_PRESCRIBED Drug | Drug IS_PRESCRIBED_TO
+      Patient | | Prescriber PRESCRIBES", "Transitive Chain (Multi-hop Collapse):
+      Multi-step traversals materialized as direct edges for O(1) lookup. | Chain
+      | Inferred Direct Edge | Business Value | |---|---|---| | Patient->Rx->Drug
+      | Patient->Drug | Which drugs is a patient on? |", "2-Stage Chain (Aggregated
+      Inference): Combine individual facts into aggregate-level insights. | Individual
+      Facts | Aggregated Inference | |---|---| | N patients on Drug X report AE type
+      Y | Drug X has safety signal for Y | | M prescribers"], "hierarchy": {"immunology":
+      ["rheumatology", "dermatology"], "oncology": ["hematologic oncology"], "neuroscience":
+      ["migraine"], "eye": []}, "business_rules": [{"category": "entity_classification",
+      "name": "TherapeuticProduct", "description": "Marketed or pipeline compounds"},
+      {"category": "entity_classification", "name": "CareProvider", "description":
+      "Entities delivering care"}, {"category": "entity_classification", "name": "CareRecipient",
+      "description": "Individuals receiving treatment"}, {"category": "entity_classification",
+      "name": "ClassificationScheme", "description": "Organizing taxonomies"}, {"category":
+      "entity_classification", "name": "ClinicalEvent", "description": "Time-stamped
+      occurrences"}, {"category": "entity_classification", "name": "CareGuideline",
+      "description": "Evidence-based protocols"}, {"category": "relationship", "name":
+      "IS_PRESCRIBED", "description": "Drug"}, {"category": "relationship", "name":
+      "PRESCRIBES", "description": "Drug"}, {"category": "relationship", "name": "TREATS",
+      "description": "TherapyArea"}, {"category": "relationship", "name": "WORKS_AT",
+      "description": "Facility"}, {"category": "relationship", "name": "SPECIALIZES_IN",
+      "description": "TherapyArea"}, {"category": "relationship", "name": "EXPERIENCES",
+      "description": "AdverseEvent"}, {"category": "relationship", "name": "CAUSED_BY",
+      "description": "Drug"}, {"category": "relationship", "name": "FOLLOWS_PATHWAY",
+      "description": "TreatmentPathway"}, {"category": "relationship", "name": "PRECEDES",
+      "description": "Drug"}, {"category": "relationship", "name": "PARENT_OF", "description":
+      "TherapyArea"}, {"category": "inference", "name": "Inverse Relationships (Bidirectional)",
+      "description": "If we know A->B, we automatically infer B->A with the inverse
+      predicate. | Known Fact | Inferred Fact | |---|---| | Patient IS_PRESCRIBED
+      Drug | Drug IS_PRESCRIBED_TO Patient | | Prescriber PRESCRIBES Drug | Drug PRESCRIBED_BY
+      Prescriber | | TherapyArea PARENT_OF SubArea | SubArea CHILD_OF TherapyAr"},
+      {"category": "inference", "name": "Transitive Chain (Multi-hop Collapse)", "description":
+      "Multi-step traversals materialized as direct edges for O(1) lookup. | Chain
+      | Inferred Direct Edge | Business Value | |---|---|---| | Patient->Rx->Drug
+      | Patient->Drug | Which drugs is a patient on? | | Patient->Rx->Prescriber->Facility
+      | Patient->Facility | Where does patient receive care? | | Pati"}, {"category":
+      "inference", "name": "2-Stage Chain (Aggregated Inference)", "description":
+      "Combine individual facts into aggregate-level insights. | Individual Facts
+      | Aggregated Inference | |---|---| | N patients on Drug X report AE type Y |
+      Drug X has safety signal for Y | | M prescribers at Facility F prescribe Drug
+      X | Facility F is high-value for Drug X | | K patients switch from Dru"}, {"category":
+      "treatment_switching", "name": "switch_detection", "description": "### When
+      is a \"Switch\" detected?\n\nA treatment switch is defined as:\n1. Same patient\n2.
+      Same therapy area\n3. Different drug (by mechanism of action)\n4. New drug claim
+      within 60 days of last claim for prior drug\n5. No overlap (patient is not on
+      combination therapy)\n\n### Switch Reason Classification:\n-"}, {"category":
+      "kol_identification", "name": "kol_classification", "description": "### KOL
+      Classification Rule:\nA prescriber is flagged IS_KOL = TRUE if ANY of:\n1. Published
+      >= 10 peer-reviewed articles in their therapy area (PubMed indexed)\n2. Served
+      as Principal Investigator on >= 1 Phase III clinical trial\n3. Member of national
+      guideline committee (ACR, AAD, AGA, NCCN)\n4. Top 1"}], "source_documents":
+      ["pharma_erd.md", "business_rules.md", "source_to_target.csv"], "materialization_targets":
+      ["snowflake_semantic_view", "aws_glue_data_catalog"]}'
+  - vendor_name: SNOWFLAKE
+    data: '{"import_procedure": "SYSTEM$CREATE_SEMANTIC_VIEW_FROM_OSSIE_YAML", "target_schema":
+      "ABBVIE_DATAOPS_DEV.CURATED"}'

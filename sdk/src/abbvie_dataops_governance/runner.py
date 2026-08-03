@@ -58,7 +58,7 @@ def run_manifest(manifest_path: str | Path, profile: str | None = None, *, repo_
         manifest.profile = profile  # type: ignore[assignment]
 
     adapter_cls = get_adapter(manifest.adapter)
-    adapter = adapter_cls(manifest)
+    adapter = adapter_cls(manifest, repo_root=repo_root)
     snap = adapter.introspect()
 
     bundle = EvidenceBundle(
@@ -126,6 +126,31 @@ def run_manifest(manifest_path: str | Path, profile: str | None = None, *, repo_
             )
         )
         bundle.passed = bundle.passed and all_ok
+
+    if manifest.checks.ontology:
+        spec = manifest.checks.ontology
+        facts = snap.facts
+        ds = int(facts.get("datasets", 0))
+        rel = int(facts.get("relationships", 0))
+        met = int(facts.get("metrics", 0))
+        ok = ds >= spec.min_datasets and rel >= spec.min_relationships and met >= spec.min_metrics
+        detail = f"{ds} datasets, {rel} relationships, {met} metrics"
+        if not ok and "note" in facts:
+            detail = facts["note"]
+            ok = manifest.profile == "develop"
+        bundle.outcomes.append(
+            CheckOutcome(
+                name="ontology",
+                passed=ok,
+                detail=detail,
+                data={
+                    "output_path": facts.get("output_path"),
+                    "content_hash": facts.get("content_hash"),
+                    "ontology_version": facts.get("ontology_version"),
+                },
+            )
+        )
+        bundle.passed = bundle.passed and ok
 
     bundle.emissions = _emit(manifest, snap.actual_columns, bundle.passed)
     return bundle

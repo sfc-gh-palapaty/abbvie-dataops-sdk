@@ -37,3 +37,10 @@ def test_suitecrm_change_triggers_its_manifest():
 def test_app_only_doc_does_not_trigger():
     d = detect(["docs/RUNBOOK.md", "README.md"])
     assert d.is_data_change is False
+
+
+def test_ontology_doc_change_triggers_manifest():
+    d = detect(["data/ontology/business_rules.md"])
+    assert d.is_data_change is True
+    assert "manifests/pharma-ontology.yaml" in d.triggered_manifests
+    assert d.must_fail_closed is False

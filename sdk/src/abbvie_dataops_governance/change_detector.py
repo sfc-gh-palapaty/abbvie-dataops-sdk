@@ -19,6 +19,7 @@ GOVERNED_PREFIXES: tuple[str, ...] = (
     "migrations/",
     "manifests/",
     "pipelines/",
+    "data/ontology/",
     "apps/suitecrm/migrations/",
     "apps/suitecrm/extractor/",
 )
@@ -27,6 +28,7 @@ MANIFEST_TRIGGERS: dict[str, tuple[str, ...]] = {
     "manifests/snowflake-curated.yaml": ("migrations/snowflake/", "manifests/schemas/snowflake/", "manifests/constraints/snowflake/"),
     "manifests/emr-iceberg-bronze.yaml": ("pipelines/emr/", "manifests/schemas/emr/"),
     "manifests/suitecrm-crm.yaml": ("apps/suitecrm/", "manifests/schemas/suitecrm/", "manifests/constraints/suitecrm/"),
+    "manifests/pharma-ontology.yaml": ("data/ontology/", "outputs/ontology/"),
 }
 
 REQUIRED_PAIRS: tuple[tuple[str, str], ...] = (

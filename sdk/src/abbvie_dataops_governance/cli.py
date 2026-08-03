@@ -20,6 +20,7 @@ from pathlib import Path
 import click
 
 from abbvie_dataops_governance.change_detector import detect
+from abbvie_dataops_governance.ontology.pipeline import build_ontology
 from abbvie_dataops_governance.runner import run_manifest, write_evidence
 
 
@@ -77,6 +78,75 @@ def gate_cmd(changed_files_path: Path, out_path: Path | None, strict: bool) -> N
         Path(out_path).write_text(rendered, encoding="utf-8")
     if strict and decision.must_fail_closed:
         sys.exit(2)
+
+
+@cli.command("ontology")
+@click.option("--erd", "erd_source", default="data/ontology/pharma_erd.md", show_default=True)
+@click.option("--rules", "business_rules_source", default="data/ontology/business_rules.md", show_default=True)
+@click.option("--mapping", "source_to_target_source", default="data/ontology/source_to_target.csv", show_default=True)
+@click.option("--output-dir", default="outputs/ontology", show_default=True)
+@click.option("--model-name", default="abbvie_pharma_intelligence", show_default=True)
+@click.option("--version", "ontology_version", default="2.1.0", show_default=True)
+@click.option("--database", "target_database", default="ABBVIE_DATAOPS_DEV", show_default=True)
+@click.option("--schema", "target_schema", default="CURATED", show_default=True)
+@click.option("--repo-root", type=click.Path(exists=True, file_okay=False, path_type=Path), default=None)
+@click.option("--s3-bucket", default=None, help="S3 bucket (SharePoint stand-in for demo)")
+@click.option("--s3-prefix", default=None, help="S3 prefix containing the three ontology documents")
+@click.option("--evidence-out", type=click.Path(dir_okay=False, path_type=Path), default=None)
+def ontology_cmd(
+    erd_source: str,
+    business_rules_source: str,
+    source_to_target_source: str,
+    output_dir: str,
+    model_name: str,
+    ontology_version: str,
+    target_database: str,
+    target_schema: str,
+    repo_root: Path | None,
+    s3_bucket: str | None,
+    s3_prefix: str | None,
+    evidence_out: Path | None,
+) -> None:
+    """Build OSI-compliant ontology YAML from business documents (S3 or local)."""
+    root = repo_root or Path.cwd()
+    result = build_ontology(
+        erd_source=erd_source,
+        business_rules_source=business_rules_source,
+        source_to_target_source=source_to_target_source,
+        output_dir=output_dir,
+        model_name=model_name,
+        ontology_version=ontology_version,
+        target_database=target_database,
+        target_schema=target_schema,
+        repo_root=root,
+        s3_bucket=s3_bucket,
+        s3_prefix=s3_prefix,
+    )
+    click.echo(f"OSI model written: {result.output_path}")
+    click.echo(f"  datasets={result.datasets} relationships={result.relationships} metrics={result.metrics}")
+    click.echo(f"  hash={result.content_hash}")
+    if evidence_out:
+        from abbvie_dataops_governance.runner import CheckOutcome, EvidenceBundle
+
+        bundle = EvidenceBundle(
+            service=model_name,
+            adapter="ontology",
+            profile="build",
+            classification="internal",
+            passed=True,
+            outcomes=[
+                CheckOutcome(
+                    name="ontology_build",
+                    passed=True,
+                    detail=f"{result.datasets} datasets, {result.relationships} relationships",
+                    data=result.to_dict(),
+                )
+            ],
+            adapter_facts=result.to_dict(),
+        )
+        write_evidence(bundle, evidence_out)
+        click.echo(f"  evidence written to {evidence_out}")
+    sys.exit(0)
 
 
 def main(argv: list[str] | None = None) -> int:

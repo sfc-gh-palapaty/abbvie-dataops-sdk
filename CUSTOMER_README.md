@@ -38,11 +38,12 @@ Then click into the **green check** on PR #2 → look at the `snowflake-deploy` 
 
 | Claim | Evidence in this repo |
 |---|---|
-| **One SDK, three platforms** | `sdk/` Python package + three adapters: `snowflake`, `emr`, `suitecrm` |
+| **One SDK, three platforms** | `sdk/` Python package + four adapters: `snowflake`, `emr`, `suitecrm`, `ontology` |
 | **One manifest format** | `manifests/*.yaml` — same shape regardless of platform |
 | **No long-lived secrets** | GitHub Actions authenticates to both AWS and Snowflake via OIDC ([Snowflake CLI OIDC guide](https://www.snowflake.com/en/developers/guides/configure-cicd-integrations-with-snowflake/)) |
 | **Fail-closed governance** | `pr-governance.yml` blocks any PR that touches governed data without an updated contract |
 | **Lineage everywhere** | Every adapter emits OpenLineage events → Marquez captures runs → DataHub catalogs assets |
+| **Business docs → OSI ontology** | SharePoint/S3 business documents → OSI YAML in `outputs/ontology/` → Snowflake semantic views ([runbook](customer/ONTOLOGY_DEMO_RUNBOOK.md)) |
 | **Immutable audit trail** | `SCHEMACHANGE.CHANGE_HISTORY` row with `INSTALLED_BY=GH_CICD_USER` for every applied change |
 | **Reproducible** | `terraform/` for AWS + Snowflake account shells; `apps/datahub/bootstrap.sh` for catalog stand-up |
 

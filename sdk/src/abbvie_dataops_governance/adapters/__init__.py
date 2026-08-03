@@ -18,4 +18,8 @@ def get_adapter(name: str):
         from abbvie_dataops_governance.adapters.suitecrm import SuiteCRMAdapter
 
         return SuiteCRMAdapter
+    if name == "ontology":
+        from abbvie_dataops_governance.adapters.ontology import OntologyAdapter
+
+        return OntologyAdapter
     raise ValueError(f"unknown adapter: {name}")

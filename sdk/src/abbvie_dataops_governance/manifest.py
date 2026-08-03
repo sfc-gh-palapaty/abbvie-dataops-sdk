@@ -13,7 +13,7 @@ from typing import Literal
 import yaml
 from pydantic import BaseModel, Field, field_validator
 
-AdapterName = Literal["snowflake", "emr", "suitecrm"]
+AdapterName = Literal["snowflake", "emr", "suitecrm", "ontology"]
 ProfileName = Literal["develop", "build", "promote"]
 Classification = Literal["public", "internal", "confidential", "restricted"]
 
@@ -37,11 +37,28 @@ class TokenizationSpec(BaseModel):
     classification_map: str = Field(..., description="Path to classification + method YAML")
 
 
+class OntologySpec(BaseModel):
+    model_config = {"protected_namespaces": ()}
+
+    erd_source: str = "data/ontology/pharma_erd.md"
+    business_rules_source: str = "data/ontology/business_rules.md"
+    source_to_target_source: str = "data/ontology/source_to_target.csv"
+    output_dir: str = "outputs/ontology"
+    model_name: str = "abbvie_pharma_intelligence"
+    ontology_version: str = "2.1.0"
+    target_database: str = "ABBVIE_DATAOPS_DEV"
+    target_schema: str = "CURATED"
+    min_datasets: int = 5
+    min_relationships: int = 3
+    min_metrics: int = 2
+
+
 class ChecksBlock(BaseModel):
     schema_enforcement: SchemaEnforcementSpec | None = None
     data_quality: DataQualitySpec | None = None
     constraints: ConstraintSpec | None = None
     tokenization: TokenizationSpec | None = None
+    ontology: OntologySpec | None = None
 
 
 class OpenLineageEmit(BaseModel):
@@ -80,6 +97,9 @@ class AdapterConnection(BaseModel):
 
     suitecrm_db_secret_arn: str | None = None
     suitecrm_table: str | None = None
+
+    s3_bucket: str | None = None
+    s3_prefix: str | None = None
 
 
 class Manifest(BaseModel):

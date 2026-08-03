@@ -1,0 +1,26 @@
+ENTITY,ATTRIBUTE,SOURCE_TABLE,SOURCE_COLUMN,TARGET_TABLE,TARGET_COLUMN,TRANSFORMATION,BUSINESS_RULE,DATA_TYPE,NULLABLE,NOTES
+Patient,Patient ID,SRC_CLAIMS.MEMBER,MBR_ID,PATIENTS,PATIENT_ID,DIRECT MAP,,STRING,N,Primary key
+Patient,Age,SRC_CLAIMS.MEMBER,DATE_OF_BIRTH,PATIENTS,AGE,"DATEDIFF(year, DATE_OF_BIRTH, CURRENT_DATE())","Age must be >= 18 for biologic eligibility",INTEGER,N,Calculated field
+Patient,Gender,SRC_CLAIMS.MEMBER,GENDER_CD,PATIENTS,GENDER,"DECODE(GENDER_CD, 'M','Male', 'F','Female', 'U','Unknown')",,STRING,N,Mapped from code
+Patient,Primary Diagnosis,SRC_CLAIMS.DIAGNOSIS,PRIMARY_DX_CD,PATIENTS,PRIMARY_DIAGNOSIS,LOOKUP to ICD10_REF,"Only include confirmed diagnoses (DX_STATUS='CONFIRMED')",STRING,N,Join to diagnosis reference
+Patient,Therapy Area,SRC_CLAIMS.DIAGNOSIS,PRIMARY_DX_CD,PATIENTS,THERAPY_AREA_ID,DERIVED,"Map ICD-10 to therapy area: M05-M06=Rheumatology, L40=Dermatology, K50-K51=GI, C83-C91=HemOnc, G43=Migraine",STRING,N,Business rule mapping
+Patient,Insurance Type,SRC_CLAIMS.ELIGIBILITY,PLAN_TYPE_CD,PATIENTS,INSURANCE_TYPE,"CASE WHEN PLAN_TYPE_CD IN ('HMO','PPO','POS') THEN 'Commercial' WHEN PLAN_TYPE_CD='MCR' THEN 'Medicare' WHEN PLAN_TYPE_CD='MCD' THEN 'Medicaid' ELSE 'Other' END",,STRING,N,
+Drug,Drug ID,SRC_PHARMA.PRODUCT,NDC_11,DRUGS,DRUG_ID,MAPPED,"Group NDC to brand-level using GPI hierarchy",STRING,N,Many NDCs per brand
+Drug,Brand Name,SRC_PHARMA.PRODUCT,BRAND_NAME,DRUGS,BRAND_NAME,DIRECT MAP,,STRING,N,
+Drug,Mechanism of Action,SRC_PHARMA.PRODUCT,AHFS_CLASS_CD,DRUGS,MECHANISM_OF_ACTION,LOOKUP to AHFS_REF,"Map AHFS to MOA category per medical affairs classification",STRING,Y,
+Drug,Therapy Area,SRC_PHARMA.PRODUCT,GPI_CODE,DRUGS,THERAPY_AREA_ID,DERIVED,"First 4 digits of GPI determine therapy area assignment",STRING,N,Business rule
+Prescription,Rx ID,SRC_CLAIMS.PHARMACY,CLAIM_ID,PRESCRIPTIONS,RX_ID,DIRECT MAP,,STRING,N,
+Prescription,Patient ID,SRC_CLAIMS.PHARMACY,MBR_ID,PRESCRIPTIONS,PATIENT_ID,FK REFERENCE,"Must exist in PATIENTS table",STRING,N,Referential integrity
+Prescription,Drug ID,SRC_CLAIMS.PHARMACY,NDC_11,PRESCRIPTIONS,DRUG_ID,MAPPED,"Map NDC to brand-level DRUG_ID via product hierarchy",STRING,N,
+Prescription,Fill Date,SRC_CLAIMS.PHARMACY,DATE_OF_SERVICE,PRESCRIPTIONS,FILL_DATE,DIRECT MAP,"Exclude future dates and dates > 2 years old",DATE,N,Data quality rule
+Prescription,Days Supply,SRC_CLAIMS.PHARMACY,DAYS_SUPPLY,PRESCRIPTIONS,DAYS_SUPPLY,DIRECT MAP,"Must be between 1 and 365; flag anomalies > 90 for review",INTEGER,N,
+Prescription,Switch From Drug,SRC_CLAIMS.PHARMACY,PRIOR_NDC,PRESCRIPTIONS,SWITCH_FROM_DRUG_ID,CALCULATED,"IF same patient has Rx for different drug in same therapy area within 60 days prior THEN prior drug = switch_from",STRING,Y,Complex business rule
+Prescription,Switch Reason,SRC_CLAIMS.MEDICAL,DX_ON_SWITCH_CLAIM,PRESCRIPTIONS,SWITCH_REASON,DERIVED,"Infer from diagnosis codes on claims around switch date: adverse event codes=AE, new diagnosis=inadequate response",STRING,Y,Inferred from claims
+Prescriber,Prescriber ID,SRC_PROVIDER.NPI_REGISTRY,NPI,PRESCRIBERS,PRESCRIBER_ID,DIRECT MAP,,STRING,N,
+Prescriber,Specialty,SRC_PROVIDER.NPI_REGISTRY,TAXONOMY_CD,PRESCRIBERS,SPECIALTY,LOOKUP,"Map taxonomy code to specialty name per NUCC reference",STRING,N,
+Prescriber,Is KOL,SRC_PROVIDER.NPI_REGISTRY,NPI,PRESCRIBERS,IS_KOL,CALCULATED,"TRUE if: (publications > 10 in therapy area) OR (clinical trial PI) OR (advisory board member) OR (top 10% prescriber volume)",BOOLEAN,N,"Multi-factor business rule"
+Facility,Facility ID,SRC_PROVIDER.POS_FILE,CCN,FACILITIES,FACILITY_ID,DIRECT MAP,,STRING,N,
+Facility,Health System,SRC_PROVIDER.HOSPITAL_COMPARE,SYSTEM_ID,FACILITIES,HEALTH_SYSTEM,LOOKUP,"Map CCN to health system via CMS hospital compare affiliation file",STRING,Y,
+Adverse Event,Causality Assessment,SRC_SAFETY.FAERS,CAUSALITY,ADVERSE_EVENTS,CAUSALITY_ASSESSMENT,CALCULATED,"Algorithm: IF (dechallenge positive AND rechallenge positive) THEN 'Definite' ELIF (temporal + known ADR + no alternative) THEN 'Probable' ELIF (temporal + possible alternative) THEN 'Possible' ELSE 'Unlikely'",STRING,N,Naranjo-based algorithm
+Treatment Pathway,Line of Therapy,SRC_CLAIMS.PHARMACY,CLAIM_SEQUENCE,TREATMENT_PATHWAYS,LINE_OF_THERAPY,CALCULATED,"Determined by: 1st biologic in therapy area = L1. Switch to new MOA = next line. Same MOA different drug = same line lateral switch.",INTEGER,N,Complex derivation
+Treatment Pathway,Switch Criteria,CLINICAL_GUIDELINES.PDF,GUIDELINE_TEXT,TREATMENT_PATHWAYS,SWITCH_CRITERIA,AI_EXTRACTED,"Use CORTEX.COMPLETE to extract switching criteria from clinical guideline PDFs (ACR, AAD, AGA, NCCN)",STRING,N,AI-derived from unstructured

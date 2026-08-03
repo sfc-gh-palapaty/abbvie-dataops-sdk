@@ -1,0 +1,43 @@
+# AbbVie Pharma Ontology: business documents → OSI YAML (SharePoint/S3 stand-in → git outputs)
+service: pharma-ontology
+owners: [data-platform@abbvie.com]
+classification: internal
+adapter: ontology
+profile: promote
+
+connection:
+  # Demo: read from local data/ontology/. Production: set s3_bucket + s3_prefix (SharePoint → S3 landing zone)
+  s3_bucket: null
+  s3_prefix: null
+
+checks:
+  ontology:
+    erd_source: data/ontology/pharma_erd.md
+    business_rules_source: data/ontology/business_rules.md
+    source_to_target_source: data/ontology/source_to_target.csv
+    output_dir: outputs/ontology
+    model_name: abbvie_pharma_intelligence
+    ontology_version: "2.1.0"
+    target_database: ABBVIE_DATAOPS_DEV
+    target_schema: CURATED
+    min_datasets: 8
+    min_relationships: 9
+    min_metrics: 4
+
+emit:
+  openlineage:
+    namespace: abbvie.ontology
+    job: ontology.pharma.build
+    inputs:
+      - abbvie.s3/abbvie-dataops-poc-raw/ontology/pharma_erd.md
+      - abbvie.s3/abbvie-dataops-poc-raw/ontology/business_rules.md
+      - abbvie.s3/abbvie-dataops-poc-raw/ontology/source_to_target.csv
+    outputs:
+      - abbvie.git/outputs/ontology/abbvie_pharma_intelligence_v2.1.0.yaml
+  datahub:
+    platform: git
+    env: PROD
+    datasets:
+      - { db: outputs, schema: ontology, table: abbvie_pharma_intelligence_v2_1_0_yaml }
+    upstream_urns:
+      - "urn:li:dataset:(urn:li:dataPlatform:s3,abbvie-dataops-poc-raw/ontology,PROD)"

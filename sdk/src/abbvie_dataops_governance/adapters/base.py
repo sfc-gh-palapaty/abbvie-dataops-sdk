@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
 from abbvie_dataops_governance.manifest import Manifest
@@ -20,8 +21,9 @@ class AdapterResult:
 class Adapter(ABC):
     name: str = "base"
 
-    def __init__(self, manifest: Manifest):
+    def __init__(self, manifest: Manifest, repo_root: Path | None = None):
         self.manifest = manifest
+        self.repo_root = repo_root or Path.cwd()
 
     @abstractmethod
     def introspect(self) -> AdapterResult:

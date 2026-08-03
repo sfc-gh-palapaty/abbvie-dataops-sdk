@@ -1,0 +1,29 @@
+{
+  "model_name": "abbvie_pharma_intelligence",
+  "ontology_version": "2.1.0",
+  "osi_version": "0.1.1",
+  "generated_at": "2026-08-03T23:07:05.163605+00:00",
+  "content_hash": "6a8f9a475d4ff56a",
+  "output_file": "abbvie_pharma_intelligence_v2.1.0.yaml",
+  "sources": {
+    "erd": "../data/ontology/pharma_erd.md",
+    "business_rules": "../data/ontology/business_rules.md",
+    "source_to_target": "../data/ontology/source_to_target.csv"
+  },
+  "stats": {
+    "entities": 8,
+    "relationships": 13,
+    "mappings": 25,
+    "business_rules": 21,
+    "metrics": 4
+  },
+  "materialization": {
+    "snowflake": {
+      "procedure": "SYSTEM$CREATE_SEMANTIC_VIEW_FROM_OSSIE_YAML",
+      "schema": "ABBVIE_DATAOPS_DEV.CURATED"
+    },
+    "aws": {
+      "note": "Import OSI YAML via Glue Data Catalog semantic layer or custom converter"
+    }
+  }
+}
