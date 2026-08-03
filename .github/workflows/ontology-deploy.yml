@@ -1,0 +1,166 @@
+# Ontology pipeline: business documents (SharePoint/S3 stand-in) → OSI YAML in git outputs/
+#
+# Triggers when ontology source documents or SDK ontology module changes.
+# Regenerates OSI 0.1.1 YAML, uploads evidence, and commits versioned outputs.
+
+name: ontology-deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "data/ontology/**"
+      - "manifests/pharma-ontology.yaml"
+      - "sdk/src/abbvie_dataops_governance/ontology/**"
+      - "sdk/src/abbvie_dataops_governance/adapters/ontology.py"
+      - ".github/workflows/ontology-deploy.yml"
+  workflow_dispatch:
+    inputs:
+      s3_bucket:
+        description: "Optional S3 bucket (SharePoint stand-in)"
+        required: false
+        type: string
+      s3_prefix:
+        description: "Optional S3 prefix for ontology documents"
+        required: false
+        default: "ontology"
+        type: string
+
+permissions:
+  id-token: write
+  contents: write
+
+jobs:
+  build-ontology:
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install SDK
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e './sdk[all]'
+
+      - name: Configure AWS credentials (OIDC)
+        if: ${{ vars.AWS_GHA_ROLE_ARN != '' }}
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_GHA_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Load catalog endpoints
+        if: ${{ vars.DATAHUB_ENDPOINTS_SECRET_ARN != '' }}
+        run: |
+          payload=$(aws secretsmanager get-secret-value --secret-id "${{ vars.DATAHUB_ENDPOINTS_SECRET_ARN }}" --query SecretString --output text)
+          echo "DATAHUB_GMS_URL=$(echo "$payload" | jq -r .datahub_gms_url)" >> $GITHUB_ENV
+          echo "OPENLINEAGE_URL=$(echo "$payload" | jq -r .openlineage_url)" >> $GITHUB_ENV
+          echo "DATAHUB_TOKEN=$(echo "$payload" | jq -r .datahub_token)" >> $GITHUB_ENV
+        continue-on-error: true
+
+      - name: Build OSI ontology (local sources)
+        if: ${{ github.event.inputs.s3_bucket == '' }}
+        run: |
+          abbvie-dataops run \
+            --manifest manifests/pharma-ontology.yaml \
+            --profile promote \
+            --evidence-out evidence-ontology.json
+
+      - name: Build OSI ontology (S3 sources)
+        if: ${{ github.event.inputs.s3_bucket != '' }}
+        run: |
+          abbvie-dataops ontology \
+            --repo-root . \
+            --output-dir outputs/ontology \
+            --s3-bucket "${{ github.event.inputs.s3_bucket }}" \
+            --s3-prefix "${{ github.event.inputs.s3_prefix }}"
+
+      - name: Verify OSI output
+        run: |
+          test -f outputs/ontology/abbvie_pharma_intelligence_v2.1.0.yaml
+          test -f outputs/ontology/manifest.json
+          python -c "
+          import yaml, json
+          from pathlib import Path
+          m = yaml.safe_load(Path('outputs/ontology/abbvie_pharma_intelligence_v2.1.0.yaml').read_text())
+          assert m['version'] == '0.1.1'
+          sm = m['semantic_model'][0]
+          assert len(sm['datasets']) >= 8
+          assert len(sm['metrics']) >= 4
+          print('OSI validation OK:', json.dumps(Path('outputs/ontology/manifest.json').read_text() and json.loads(Path('outputs/ontology/manifest.json').read_text())['stats']))
+          "
+
+      - name: Upload evidence bundle
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evidence-ontology
+          path: |
+            evidence-ontology.json
+            outputs/ontology/*
+
+      - name: Commit regenerated OSI YAML
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore(ontology): regenerate OSI YAML from business documents"
+          file_pattern: "outputs/ontology/*"
+          commit_user_name: github-actions[bot]
+          commit_user_email: github-actions[bot]@users.noreply.github.com
+
+  import-semantic-view:
+    needs: build-ontology
+    runs-on: ubuntu-latest
+    environment: dev
+    if: ${{ vars.SNOWFLAKE_ACCOUNT != '' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Snowflake CLI (OIDC-enabled)
+        uses: snowflakedb/snowflake-cli-action@v2
+        with:
+          use-oidc: true
+          cli-version: "3.16"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install snowflake-connector-python pyyaml
+
+      - name: Apply pharma demo tables (if needed)
+        env:
+          SNOWFLAKE_ACCOUNT: ${{ vars.SNOWFLAKE_ACCOUNT }}
+          SNOWFLAKE_USER: ${{ vars.SNOWFLAKE_USER }}
+          SNOWFLAKE_ROLE: ${{ vars.SNOWFLAKE_ROLE }}
+          SNOWFLAKE_WAREHOUSE: ${{ vars.SNOWFLAKE_WAREHOUSE }}
+          SNOWFLAKE_DATABASE: ${{ vars.SNOWFLAKE_DATABASE }}
+          SNOWFLAKE_AUTHENTICATOR: WORKLOAD_IDENTITY
+        run: |
+          snow sql -q "ALTER SESSION SET QUERY_TAG='ontology-deploy';" || true
+          snow sql -f migrations/snowflake/V2.0.0__pharma_demo_tables.sql
+
+      - name: Import OSI YAML to Snowflake semantic view
+        env:
+          SNOWFLAKE_ACCOUNT: ${{ vars.SNOWFLAKE_ACCOUNT }}
+          SNOWFLAKE_USER: ${{ vars.SNOWFLAKE_USER }}
+          SNOWFLAKE_ROLE: ${{ vars.SNOWFLAKE_ROLE }}
+          SNOWFLAKE_WAREHOUSE: ${{ vars.SNOWFLAKE_WAREHOUSE }}
+          SNOWFLAKE_DATABASE: ABBVIE_DATAOPS_DEV
+          SNOWFLAKE_AUTHENTICATOR: WORKLOAD_IDENTITY
+        run: |
+          python scripts/import_osi_semantic_view.py \
+            --yaml outputs/ontology/abbvie_pharma_intelligence_v2.1.0.yaml \
+            --schema ABBVIE_DATAOPS_DEV.CURATED
