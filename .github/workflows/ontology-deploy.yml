@@ -167,7 +167,7 @@ jobs:
           SNOWFLAKE_USER: ${{ vars.SNOWFLAKE_USER }}
           SNOWFLAKE_ROLE: ${{ vars.SNOWFLAKE_ROLE }}
           SNOWFLAKE_WAREHOUSE: ${{ vars.SNOWFLAKE_WAREHOUSE }}
-          SNOWFLAKE_DATABASE: ABBVIE_DATAOPS_DEV
+          SNOWFLAKE_DATABASE: ${{ vars.SNOWFLAKE_DATABASE }}
           SNOWFLAKE_AUTHENTICATOR: WORKLOAD_IDENTITY
         run: |
           cd scripts
