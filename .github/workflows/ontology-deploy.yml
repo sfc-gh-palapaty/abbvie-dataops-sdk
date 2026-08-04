@@ -155,10 +155,11 @@ jobs:
           SNOWFLAKE_ROLE: ${{ vars.SNOWFLAKE_ROLE }}
           SNOWFLAKE_WAREHOUSE: ${{ vars.SNOWFLAKE_WAREHOUSE }}
           SNOWFLAKE_DATABASE: ${{ vars.SNOWFLAKE_DATABASE }}
+          # snowflake-cli-action exports SNOWFLAKE_TOKEN + WORKLOAD_IDENTITY_PROVIDER=OIDC
           SNOWFLAKE_AUTHENTICATOR: WORKLOAD_IDENTITY
         run: |
-          snow sql -q "ALTER SESSION SET QUERY_TAG='ontology-deploy';" || true
-          snow sql -f migrations/snowflake/V2.0.0__pharma_demo_tables.sql
+          cd scripts
+          python apply_sql_file.py ../migrations/snowflake/V2.0.0__pharma_demo_tables.sql
 
       - name: Import OSI YAML to Snowflake semantic view
         env:
@@ -166,9 +167,10 @@ jobs:
           SNOWFLAKE_USER: ${{ vars.SNOWFLAKE_USER }}
           SNOWFLAKE_ROLE: ${{ vars.SNOWFLAKE_ROLE }}
           SNOWFLAKE_WAREHOUSE: ${{ vars.SNOWFLAKE_WAREHOUSE }}
-          SNOWFLAKE_DATABASE: ABBVIE_DATAOPS_DEV
+          SNOWFLAKE_DATABASE: ${{ vars.SNOWFLAKE_DATABASE }}
           SNOWFLAKE_AUTHENTICATOR: WORKLOAD_IDENTITY
         run: |
-          python scripts/import_osi_semantic_view.py \
-            --yaml outputs/ontology/abbvie_pharma_intelligence_v2.1.0.yaml \
+          cd scripts
+          python import_osi_semantic_view.py \
+            --yaml ../outputs/ontology/abbvie_pharma_intelligence_v2.1.0.yaml \
             --schema ABBVIE_DATAOPS_DEV.CURATED
