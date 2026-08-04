@@ -1,0 +1,15 @@
+-- One-time fix: local dev created ABBVIE_PHARMA_INTELLIGENCE under a personal role.
+-- CI (GH_CICD_USER / ABBVIE_DATAOPS_DEPLOY) needs OWNERSHIP to replace it.
+-- Run once as ACCOUNTADMIN in Snowsight, then re-run ontology-deploy workflow.
+
+USE ROLE ACCOUNTADMIN;
+
+-- Option A (recommended): transfer ownership to the deploy role
+GRANT OWNERSHIP ON SEMANTIC VIEW ABBVIE_DATAOPS_DEV.CURATED.ABBVIE_PHARMA_INTELLIGENCE
+    TO ROLE ABBVIE_DATAOPS_DEPLOY
+    COPY CURRENT GRANTS;
+
+-- Option B: drop the orphaned view and let CI recreate it
+-- DROP SEMANTIC VIEW IF EXISTS ABBVIE_DATAOPS_DEV.CURATED.ABBVIE_PHARMA_INTELLIGENCE;
+
+SHOW GRANTS ON SEMANTIC VIEW ABBVIE_DATAOPS_DEV.CURATED.ABBVIE_PHARMA_INTELLIGENCE;

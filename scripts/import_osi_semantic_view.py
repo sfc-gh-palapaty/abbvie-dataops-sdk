@@ -40,17 +40,35 @@ def main() -> int:
     cur = conn.cursor()
     cur.execute(f"USE SCHEMA {args.schema}")
 
+    view_name = "ABBVIE_PHARMA_INTELLIGENCE"
+    view_fqn = f"{args.schema}.{view_name}"
+
+    # Idempotent deploy: drop when CI role owns the view (no-op on first run).
+    try:
+        cur.execute(f"DROP SEMANTIC VIEW IF EXISTS {view_fqn}")
+        print(f"Dropped existing semantic view (if any): {view_fqn}")
+    except Exception as exc:
+        print(f"Note: could not drop {view_fqn}: {exc}")
+
     print(f"Creating semantic view in {args.schema} from {yaml_path.name}...")
-    # Use dollar-quoting — no need to escape single quotes inside YAML
-    cur.execute(
-        f"CALL SYSTEM$CREATE_SEMANTIC_VIEW_FROM_OSSIE_YAML('{args.schema}', $${yaml_content}$$)"
-    )
+    try:
+        cur.execute(
+            f"CALL SYSTEM$CREATE_SEMANTIC_VIEW_FROM_OSSIE_YAML('{args.schema}', $${yaml_content}$$)"
+        )
+    except Exception as exc:
+        err = str(exc)
+        if "already exists" in err and "no privileges" in err:
+            print(
+                "\nERROR: Semantic view exists but CI role lacks OWNERSHIP.\n"
+                "Run docs/SNOWFLAKE_SEMANTIC_VIEW_FIX.sql once as ACCOUNTADMIN, then re-run CI.\n",
+                file=sys.stderr,
+            )
+        raise
     result = cur.fetchone()
     print(f"  Result: {result}")
 
-    view_fqn = f"{args.schema}.ABBVIE_PHARMA_INTELLIGENCE"
     print(f"\nVerifying semantic view exists...")
-    cur.execute(f"SHOW SEMANTIC VIEWS LIKE 'ABBVIE_PHARMA_INTELLIGENCE' IN SCHEMA {args.schema}")
+    cur.execute(f"SHOW SEMANTIC VIEWS LIKE '{view_name}' IN SCHEMA {args.schema}")
     rows = cur.fetchall()
     print(f"  Found {len(rows)} semantic view(s)")
 
