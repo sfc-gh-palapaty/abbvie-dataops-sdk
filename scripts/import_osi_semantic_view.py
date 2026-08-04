@@ -4,46 +4,10 @@
 from __future__ import annotations
 
 import argparse
-import os
 import sys
 from pathlib import Path
 
-
-def _connect(connection_name: str = "default"):
-    import snowflake.connector
-
-    if os.getenv("SNOWFLAKE_ACCOUNT"):
-        kwargs: dict = {
-            "account": os.environ["SNOWFLAKE_ACCOUNT"],
-            "user": os.environ["SNOWFLAKE_USER"],
-            "role": os.environ.get("SNOWFLAKE_ROLE"),
-            "warehouse": os.environ.get("SNOWFLAKE_WAREHOUSE"),
-            "database": os.environ.get("SNOWFLAKE_DATABASE"),
-        }
-        if os.getenv("SNOWFLAKE_AUTHENTICATOR", "").upper() == "WORKLOAD_IDENTITY":
-            kwargs["authenticator"] = "WORKLOAD_IDENTITY"
-            if os.getenv("SNOWFLAKE_TOKEN"):
-                kwargs["token"] = os.environ["SNOWFLAKE_TOKEN"]
-            if os.getenv("SNOWFLAKE_WORKLOAD_IDENTITY_PROVIDER"):
-                kwargs["workload_identity_provider"] = os.environ["SNOWFLAKE_WORKLOAD_IDENTITY_PROVIDER"]
-        elif os.getenv("SNOWFLAKE_PASSWORD"):
-            kwargs["password"] = os.environ["SNOWFLAKE_PASSWORD"]
-        return snowflake.connector.connect(**kwargs)
-
-    import tomllib
-
-    conn_file = Path.home() / ".snowflake" / "connections.toml"
-    cfg = tomllib.loads(conn_file.read_text())
-    name = cfg.get("default_connection_name", connection_name)
-    c = cfg[name]
-    return snowflake.connector.connect(
-        account=c["account"],
-        user=c["user"],
-        password=c.get("password"),
-        role=c.get("role", "ACCOUNTADMIN"),
-        warehouse=c.get("warehouse"),
-        database=c.get("database"),
-    )
+from snowflake_connect import connect
 
 
 def main() -> int:
@@ -65,7 +29,7 @@ def main() -> int:
     yaml_content = yaml_path.read_text(encoding="utf-8")
 
     try:
-        conn = _connect(args.connection)
+        conn = connect()
     except ImportError:
         print("ERROR: pip install snowflake-connector-python", file=sys.stderr)
         return 1
