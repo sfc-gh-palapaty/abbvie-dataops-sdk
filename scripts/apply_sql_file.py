@@ -25,6 +25,7 @@ def main() -> int:
         print(f"ERROR: Snowflake connection failed: {exc}", file=sys.stderr)
         return 1
 
+    sql = args.sql_file.read_text(encoding="utf-8")
     print(f"Executing {args.sql_file.name}...")
     for cur in conn.execute_string(sql):
         try:
